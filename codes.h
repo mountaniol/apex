@@ -1,0 +1,15 @@
+#ifndef CODES_H_
+#define CODES_H_
+
+enum yes_no {
+	NO = 0,
+	YES = 1,
+};
+
+typedef enum status_struct {
+	EXA_AGAIN = -2, /**< Try again later */
+	EXA_ERROR = -1, /**< Error, can not contunue the operation */
+	OK = 0, /**< Operation completed successfully */
+} ret_code_t;
+
+#endif /* CODES_H_ */
