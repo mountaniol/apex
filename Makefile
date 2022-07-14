@@ -26,6 +26,9 @@ CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DDEBUG3 -DFIFO_DEBUG
 BUFT_O=buf_t.o
 BUFT_A=buf_t.a
 
+MBOX_O=mbox.o
+MBOX_A=mbox.a
+
 # The library example 
 APEX_O=apex.o zhash2.o list.o
 APEX_T=apex.out
@@ -33,7 +36,7 @@ APEX_T=apex.out
 all: apex
 
 clean:
-	rm -f $(APEX_O) $(APEX_T) $(BUFT_O) $(BUFT_A)
+	rm -f $(APEX_O) $(APEX_T) $(BUFT_O) $(BUFT_A) $(MBOX_O) $(MBOX_A)
 
 apex: $(APEX_O)
 	$(GCC) $(CFLAGS) $(APEX_O) -o $(APEX_T)
@@ -41,6 +44,9 @@ apex: $(APEX_O)
 
 buft: $(BUFT_O) # compile buf_t and build archive
 	ar rcs $(BUFT_A) $(BUFT_O)
+
+mbox: $(BUFT_O) $(MBOX_O) # compile buf_t and build archive
+	ar rcs $(MBOX_A) $(BUFT_O) $(MBOX_O)
 
 %.o:%.c
 	@echo "|>" $@...

@@ -32,9 +32,6 @@ typedef int ret_t;
 
 #define TFREE_SIZE(x,sz) do { if(NULL != x) {memset(x,0,sz);free(x); x = NULL;} else {DE(">>>>>>>> Tried to free_size() NULL: %s (%s +%d)\n", #x, __func__, __LINE__);} }while(0)
 
-/* Whidth of the flags field */
-typedef uint8_t buf_t_flags_t;
-
 /* Size of 'room' and 'used':
  * 1. If this type is "uint64", the max size of data buffer is:
  * 18446744073709551615 bytes,
@@ -78,30 +75,6 @@ typedef struct {
 /** If there is 'abort on error' is set, this macro stops
  *  execution and generates core file */
 // #define TRY_ABORT() do{ if(0 != bug_get_abort_flag()) {DE("Abort in %s +%d\n", __FILE__, __LINE__);abort();} } while(0)
-
-/**
- * @author Sebastian Mountaniol (16/06/2020)
- * @func void buf_set_abort(void)
- * @brief set "abort on errors" state
- * @param void
- */
-extern void buf_set_abort_flag(void);
-
-/**
- * @author Sebastian Mountaniol (16/06/2020)
- * @func void buf_unset_abort(void)
- * @brief Unset "abort on errors" state
- * @param void
- */
-extern void buf_unset_abort_flag(void);
-
-/**
- * @author Sebastian Mountaniol (14/06/2020)
- * @func void buf_default_flags(buf_t_flags_t f)
- * @brief Set default buf_t flags. Will be applied for every allocated new buf_t struct.
- * @param buf_t_flags_t f
- */
-extern void buf_default_flags(buf_t_flags_t f);
 
 /**
  * @author Sebastian Mountaniol (01/06/2020)
