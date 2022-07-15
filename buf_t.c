@@ -306,7 +306,9 @@ ret_t buf_free(buf_t *buf)
 	}
 
 	/* If there's an internal buffer, release it */
-	TFREE_SIZE(buf->data, buf_used_take(buf));
+	if (NULL != buf->data) {
+		TFREE_SIZE(buf->data, buf_used_take(buf));
+	}
 	/* Release the buf_t struct */
 	TFREE_SIZE(buf, sizeof(buf_t));
 	return (OK);
