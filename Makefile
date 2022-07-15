@@ -18,7 +18,7 @@ ifneq ($(linker),)
 	LD=$(linker)
 endif
 
-DEBUG=-DDERROR3 -ggdb
+DEBUG=-DDERROR3 -DDEBUG3 -ggdb
 #CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DDEBUG3 -I$(MOSQ_INC) -I./ -I./zhash
 #CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DFIFO_DEBUG -DDEBUG3 -I$(MOSQ_INC) -I./ -I./zhash
 CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DDEBUG3 -DFIFO_DEBUG
@@ -30,7 +30,7 @@ MBOX_O=mbox.o
 MBOX_A=mbox.a
 
 MBOX_TEST_O=mbox_test.o $(MBOX_O) $(BUFT_O)
-MBOX_TEST_T=mbox_test.out
+MBOX_TEST_T=test_mbox.out
 
 # The library example 
 APEX_O=apex.o zhash2.o list.o
