@@ -52,7 +52,7 @@ static int mbox_new_test(void)
 		/* 1. Allocate an empty mbox */
 		mb = mbox_new_several_test(boxes[i]);
 		DD("Success: allocated mbox with %u boxes\n", boxes[i]);
-		free(mb);
+		mbox_free(mb);
 	}
 	return 0;
 }
