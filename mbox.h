@@ -281,7 +281,7 @@ extern ssize_t mbox_box_new(mbox_t *mbox, void *buffer, size_t buffer_size);
  *  		after this operation the box 1 will contain "Blue
  *  		car and yellow bike"
  */
-extern ret_t mbox_box_add(mbox_t *mbox, size_t box_num, void *buffer, size_t buffer_size);
+extern ret_t mbox_box_add(mbox_t *mbox, buf_s64_t box_num, void *buffer, size_t buffer_size);
 
 /**
  * @author Sebastian Mountaniol (7/12/22)

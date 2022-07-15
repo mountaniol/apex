@@ -94,6 +94,7 @@ ret_t mbox_free(mbox_t *mbox)
 /* Add more boxes */
 ret_t mbox_boxes_add(mbox_t *mbox, size_t num)
 {
+	size_t i;
 	TESTP(mbox, -1);
 	size_t new_size = mbox->bufs_num + num;
 	new_size *= sizeof(buf_t *);
@@ -112,6 +113,15 @@ ret_t mbox_boxes_add(mbox_t *mbox, size_t num)
 		free(mbox->bufs);
 		mbox->bufs = new_bufs;
 	}
+
+	/* Now allocate boxes */
+	for (i = mbox->bufs_num; i < mbox->bufs_num + num; i++) {
+		mbox->bufs[i] = buf_new(0);
+		if (NULL == mbox->bufs[i]) {
+			DE("Could not add new buf_t at index %lu\n", i);
+		}
+	}
+	mbox->bufs_num += num;
 
 	/* Case 3: Reallocated, and the same pointer, no need to do anything */
 	return 0;
@@ -240,21 +250,70 @@ mbox_t *mbox_from_buf(__attribute__((unused)) buf_t *buf)
 	/* TODO */
 }
 
-ssize_t mbox_box_new(__attribute__((unused)) mbox_t *mbox, 
-					 __attribute__((unused)) void *buffer, 
-					 __attribute__((unused)) size_t buffer_size)
+/* Create a new mbox and add data */
+ssize_t mbox_box_new(mbox_t *mbox, void *buffer, size_t buffer_size)
 {
-	return -1;
-	/* TODO */
+	TESTP(mbox, -1);
+	TESTP(buffer, -1);
+
+	/* Add a new box */
+	if (0 != mbox_boxes_add(mbox,1)) {
+		DE("Can not add another box into Mbox\n");
+		return -1;
+	}
+
+	DDD("Now number of boxes: %lu\n", mbox->bufs_num);
+
+	if(0 != mbox_box_add(mbox, mbox->bufs_num - 1, buffer, buffer_size)) {
+		DE("Could not add data into a new box %lu\n", mbox->bufs_num - 1);
+	}
+
+	/* Return the number of the new box */
+	return (mbox->bufs_num - 1);
 }
 
-ret_t mbox_box_add(__attribute__((unused)) mbox_t *mbox, 
-				   __attribute__((unused)) size_t box_num, 
-				   __attribute__((unused)) void *buffer, 
-				   __attribute__((unused)) size_t buffer_size)
+/* Return 1 if the box valid, 0 otherwise, -1 on error;
+   It does not tests that the box created, only that the box index is in range */
+static int mbox_if_box_index_valid(mbox_t *mbox, buf_s64_t box_num)
 {
-	return -1;
-	/* TODO */
+	TESTP(mbox, -1);
+	if (0 == mbox->bufs_num) {
+		return 0;
+	}
+
+	if (box_num > (mbox->bufs_num - 1)) {
+		return 0;
+	}
+
+	return 1;
+}
+
+/* Tests that there the index of the box valid AND is a box by the given index. */
+static int mbox_if_box_valid(mbox_t *mbox, buf_s64_t box_num)
+{
+	if (1 != mbox_if_box_index_valid(mbox,box_num)) {
+		return 0;
+	}
+
+	if (NULL == mbox->bufs[box_num]) {
+		return 0;
+	}
+
+	return 1;
+}
+
+/* Add data to a mbox */
+ret_t mbox_box_add(mbox_t *mbox, buf_s64_t box_num, void *buffer, size_t buffer_size)
+{
+	TESTP(mbox, -1);
+	TESTP(buffer, -1);
+
+	if (1 != mbox_if_box_valid(mbox, box_num)) {
+		DE("Box index is out of range\n");
+		return -1;
+	}
+
+	return buf_add(mbox->bufs[box_num], buffer, buffer_size);
 }
 
 ret_t mbox_box_replace(__attribute__((unused)) mbox_t *mbox, 
@@ -266,18 +325,40 @@ ret_t mbox_box_replace(__attribute__((unused)) mbox_t *mbox,
 	/* TODO */
 }
 
-void *mbox_box_ptr(__attribute__((unused)) mbox_t *mbox, 
-				   __attribute__((unused)) size_t box_num)
+void *mbox_box_ptr(mbox_t *mbox, size_t box_num)
 {
-	return NULL;
-	/* TODO */
+	TESTP(mbox, NULL);
+	TESTP(mbox->bufs, NULL);
+
+	if ((buf_s64_t) box_num > mbox->bufs_num) {
+		DE("Asked box is out of range\n");
+		return NULL;
+	}
+
+	if (NULL == mbox->bufs[box_num]) {
+		DE("There is no buffer by asked index: %zu\n", box_num);
+		return NULL;
+	}
+
+	return mbox->bufs[box_num]->data;
 }
 
-ssize_t mbox_box_size(__attribute__((unused)) mbox_t *mbox, 
-					  __attribute__((unused)) size_t box_num)
+ssize_t mbox_box_size(mbox_t *mbox, size_t box_num)
 {
-	return -1;
-	/* TODO */
+	TESTP(mbox, -1);
+	TESTP(mbox->bufs, -1);
+
+	if ((buf_s64_t) box_num > mbox->bufs_num) {
+		DE("Asked box is out of range\n");
+		return -1;
+	}
+
+	if (NULL == mbox->bufs[box_num]) {
+		DE("There is no buffer by asked index: %zu\n", box_num);
+		return -1;
+	}
+
+	return mbox->bufs[box_num]->used;
 }
 
 ret_t mbox_box_free_mem(__attribute__((unused)) mbox_t *mbox, 
