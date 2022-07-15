@@ -41,8 +41,9 @@ mbox_t *mbox_new(uint32_t number_of_boxes)
 		return mbox;
 	}
 
-	mbox->bufs = malloc(sizeof(buf_t *));
+	mbox->bufs = malloc(sizeof(buf_t *) * number_of_boxes);
 	if (NULL == mbox->bufs) {
+		DE("Can not allocate pointers array for %u boxes\n", number_of_boxes);
 		mbox_t_release(mbox);
 		return NULL;
 	}
@@ -50,6 +51,7 @@ mbox_t *mbox_new(uint32_t number_of_boxes)
 	for (i = 0; i < number_of_boxes; i++) {
 		mbox->bufs[i] = buf_new(0);
 		if (NULL == mbox->bufs[i]) {
+			DE("Can not allocate boxe number %u of %u\n", i, number_of_boxes);
 			mbox_t_release(mbox);
 			return NULL;
 		}
@@ -80,6 +82,7 @@ ret_t mbox_clean(mbox_t *mbox)
 		for (i = 0; i < mbox->bufs_num; i++) {
 			buf_free(mbox->bufs[i]);
 		}
+		free(mbox->bufs);
 	}
 	mbox->bufs_num = 0;
 	return 0;
@@ -208,67 +211,81 @@ ret_t mbox_boxes_merge(mbox_t *mbox, size_t src, size_t dst)
 	return 0;
 }
 
-ret_t mbox_box_bisect(mbox_t *mbox, size_t box_num, size_t from_offset)
+ret_t mbox_box_bisect(__attribute__((unused)) mbox_t *mbox,
+					  __attribute__((unused))  size_t box_num,
+					  __attribute__((unused)) size_t from_offset)
 {
 	return -1;
 	/* TODO */
 }
 
-ret_t mbox_boxes_collapse_in_place(mbox_t *mbox)
+ret_t mbox_boxes_collapse_in_place(__attribute__((unused)) mbox_t *mbox)
 {
 	return -1;
 	/* TODO */
 }
 
-buf_t *mbox_to_buf(mbox_t *mbox)
+buf_t *mbox_to_buf(__attribute__((unused)) mbox_t *mbox)
 {
 	return NULL;
 	/* TODO */
 }
 
-mbox_t *mbox_from_buf(buf_t *buf)
+mbox_t *mbox_from_buf(__attribute__((unused)) buf_t *buf)
 {
 	return NULL;
 	/* TODO */
 }
 
-ssize_t mbox_box_new(mbox_t *mbox, void *buffer, size_t buffer_size)
+ssize_t mbox_box_new(__attribute__((unused)) mbox_t *mbox, 
+					 __attribute__((unused)) void *buffer, 
+					 __attribute__((unused)) size_t buffer_size)
 {
 	return -1;
 	/* TODO */
 }
 
-ret_t mbox_box_add(mbox_t *mbox, size_t box_num, void *buffer, size_t buffer_size)
+ret_t mbox_box_add(__attribute__((unused)) mbox_t *mbox, 
+				   __attribute__((unused)) size_t box_num, 
+				   __attribute__((unused)) void *buffer, 
+				   __attribute__((unused)) size_t buffer_size)
 {
 	return -1;
 	/* TODO */
 }
 
-ret_t mbox_box_replace(mbox_t *mbox, size_t box_num, void *buffer, size_t buffer_size)
+ret_t mbox_box_replace(__attribute__((unused)) mbox_t *mbox, 
+					   __attribute__((unused)) size_t box_num, 
+					   __attribute__((unused)) void *buffer, 
+					   __attribute__((unused)) size_t buffer_size)
 {
 	return -1;
 	/* TODO */
 }
 
-void *mbox_box_ptr(mbox_t *mbox, size_t box_num)
+void *mbox_box_ptr(__attribute__((unused)) mbox_t *mbox, 
+				   __attribute__((unused)) size_t box_num)
 {
 	return NULL;
 	/* TODO */
 }
 
-ssize_t mbox_box_size(mbox_t *mbox, size_t box_num)
+ssize_t mbox_box_size(__attribute__((unused)) mbox_t *mbox, 
+					  __attribute__((unused)) size_t box_num)
 {
 	return -1;
 	/* TODO */
 }
 
-ret_t mbox_box_free_mem(mbox_t *mbox, size_t box_num)
+ret_t mbox_box_free_mem(__attribute__((unused)) mbox_t *mbox, 
+						__attribute__((unused)) size_t box_num)
 {
 	return -1;
 	/* TODO */
 }
 
-void *mbox_box_steal_mem(mbox_t *mbox, size_t box_num)
+void *mbox_box_steal_mem(__attribute__((unused)) mbox_t *mbox, 
+						 __attribute__((unused)) size_t box_num)
 {
 	return NULL;
 	/* TODO */

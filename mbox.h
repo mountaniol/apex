@@ -43,6 +43,18 @@ typedef struct {
 	buf_s64_t bufs_num; /**< Number of bufs in the array */
 } mbox_t;
 
+typedef struct {
+	uint32_t box_size; /** The< size of the box, not include ::box_size and ::box_checksum fields */
+	uint32_t box_checksum; /**< The checksum of box buffer, means ::box_dump field; This field is optional, and ignored if == 0 */
+	int8_t box_dump[]; /**< The dump of a box */
+} box_dump_t;
+
+typedef struct {
+	uint32_t total_len; /**< Total length of this buffer, including 'total_len' field */
+	uint32_t boxes_num; /**< Number of Boxed in this buffer */
+	box_dump_t boxes_arr[]; /**< Array of box dumps: the size of the arrays is boxes_num */
+} mbox_send_header_t;
+
 /*** Mbuf create / release ***/
 
 /**
