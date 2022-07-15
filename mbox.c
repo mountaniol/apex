@@ -60,6 +60,24 @@ mbox_t *mbox_new(uint32_t number_of_boxes)
 	return mbox;
 }
 
+/* Clean all boxes */
+ret_t mbox_clean(mbox_t *mbox)
+{
+	TESTP(mbox, -1);
+	if (mbox->bufs && (mbox->bufs_num > 0)) {
+		uint32_t i;
+		DDD("Cleaning mbox->bufs_num boxes\n");
+		for (i = 0; i < mbox->bufs_num; i++) {
+			buf_free(mbox->bufs[i]);
+		}
+		free(mbox->bufs);
+	} else {
+		DDD("Not cleaning boxes\n");
+	}
+
+	mbox->bufs_num = 0;
+	return 0;
+}
 
 /* Free Mbox */
 ret_t mbox_free(mbox_t *mbox)
@@ -70,21 +88,6 @@ ret_t mbox_free(mbox_t *mbox)
 	}
 
 	mbox_t_release(mbox);
-	return 0;
-}
-
-/* Clean all boxes */
-ret_t mbox_clean(mbox_t *mbox)
-{
-	TESTP(mbox, -1);
-	if (mbox->bufs && (mbox->bufs_num > 0)) {
-		uint32_t i;
-		for (i = 0; i < mbox->bufs_num; i++) {
-			buf_free(mbox->bufs[i]);
-		}
-		free(mbox->bufs);
-	}
-	mbox->bufs_num = 0;
 	return 0;
 }
 
