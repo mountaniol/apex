@@ -313,6 +313,7 @@ ret_t buf_free(buf_t *buf)
 	TFREE_SIZE(buf, sizeof(buf_t));
 	return (OK);
 }
+
 /* Copy the given buffer "new_data" at tail of the buf_t */
 ret_t buf_add(buf_t *buf /* Buf_t to add into */,
 			  const char *new_data /* Buffer to add */,
@@ -329,7 +330,7 @@ ret_t buf_add(buf_t *buf /* Buf_t to add into */,
 	}
 
 	/* Assure that we have enough room to add this buffer */
-	if (0 != buf_room_assure(buf, size)) {
+	if (OK != buf_room_assure(buf, size)) {
 		DE("Can't add room into buf_t\n");
 		TRY_ABORT();
 		return (-ENOMEM);
@@ -339,6 +340,47 @@ ret_t buf_add(buf_t *buf /* Buf_t to add into */,
 	memcpy(buf->data + buf_used_take(buf), new_data, size);
 	/* Increase the buf->used */
 	buf_used_inc(buf, size);
+
+	BUF_TEST(buf);
+	return (OK);
+}
+
+/* Copy the given buffer "new_data" at tail of the buf_t */
+ret_t buf_replace(buf_t *buf /* Buf_t to replace data in */,
+			  const char *new_data /* Buffer to copy into the buf_t */,
+			  const buf_s64_t size /* Size of the new buffer to set */)
+{
+	buf_s64_t current_room_size;
+
+	/* NOTE: This function is not dedicated to reset the buf_t:
+	 * It means, this function does not accept new_data == NULL + size == 0.
+	   If one needs to reset the buf_t, there is a dedicated funtion for this task */
+	TESTP_ASSERT(buf, "buf is NULL");
+	TESTP_ASSERT(new_data, "new_data is NULL");
+
+	/* We can not add buffer of 0 bytes or less; probably , if we here it is a bug */
+	if (size < 1) {
+		DE("Wrong argument(s): b = %p, buf = %p, size = %ld\n", buf, new_data, size);
+		TRY_ABORT();
+		return (-EINVAL);
+	}
+
+	/* We use this variable to minimize number of calls of buf_room_take(buf) */
+	current_room_size = buf_room_take(buf);
+
+	/* Assure that we have enough room to set the new buffer */
+	if (size > current_room_size &&  /* If size of the new buffer bigger than current buffer */
+		OK != buf_room_assure(buf, size - current_room_size)) { /* And if we could not allocated additional memory */
+		DE("Can't add room into buf_t\n");
+		TRY_ABORT();
+		return (-ENOMEM);
+	}
+
+	/* And now we are adding the buffer at the tail */
+	memcpy(buf->data, new_data, size);
+
+	/* Set the new buf->used */
+	buf_used_set(buf, size);
 
 	BUF_TEST(buf);
 	return (OK);

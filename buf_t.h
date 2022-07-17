@@ -263,6 +263,23 @@ extern ret_t buf_free(buf_t *buf);
 extern ret_t buf_add(buf_t *buf, const char *new_data, const buf_s64_t size);
 
 /**
+ * @author Sebastian Mountaniol (7/17/22)
+ * @brief Replace current data in the Buf_t to a new buffer
+ * @param buf_t* buf     Buf_t to replace data buffer. Can not
+ *  		   be NULL.
+ * @param const char* new_data New data buffer to set. Must be >
+ *  			0
+ * @param const buf_s64_t size    Size of the new data buffer
+ * @return ret_t OK on success, -EINVAL on an invalid argument,
+ *  	   -ENOMEM if could not allocate memory
+ * @details NOT TESTED YET. This function dedicated to replace
+ *  		Buf_t data with a new buffer. The new data buffer
+ *  		must be not NULL, and its size must be > 0,
+ *  		otherwise this function fails or returns an error.
+ */
+ret_t buf_replace(buf_t *buf, const char *new_data, const buf_s64_t size );
+
+/**
  * @author Sebastian Mountaniol (14/06/2020)
  * @func buf_usize_t buf_used_take(buf_t *buf)
  * @brief Return size in bytes of used memory (which is buf->used)
