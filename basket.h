@@ -1,5 +1,5 @@
-#ifndef MBUF_H_
-#define MBUF_H_
+#ifndef BASKET_H_
+#define BASKET_H_
 
 /*
  * We use definitions and types from buf_t:
@@ -65,7 +65,7 @@ typedef struct {
 	uint32_t basket_checksum; /**< The checksum of box buffer, means ::box_dump field; This field is optional, and ignored if == 0 */
 } __attribute__((packed)) basket_send_header_t;
 
-/*** Mbuf create / release ***/
+/*** Bsket create / release ***/
 
 /**
  * @author Sebastian Mountaniol (6/12/22)
@@ -408,4 +408,4 @@ extern ret_t box_data_free(basket_t *basket, const size_t box_num);
  */
 extern void *box_steal_data(basket_t *basket, const size_t box_num);
 
-#endif /* MBUF_H_ */
+#endif /* BASKET_H_ */

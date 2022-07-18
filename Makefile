@@ -26,11 +26,11 @@ CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DDEBUG3 -DFIFO_DEBUG
 BUFT_O=buf_t.o buf_t_memory.o
 BUFT_A=buf_t.a
 
-MBOX_O=mbox.o
-MBOX_A=mbox.a
+BASKET_O=basket.o
+BASKET_A=basket.a
 
-MBOX_TEST_O=mbox_test.o $(MBOX_O) $(BUFT_O)
-MBOX_TEST_T=test_mbox.out
+BASKET_TEST_O=basket_test.o $(BASKET_O) $(BUFT_O)
+BASKET_TEST_T=test_basket.out
 
 # The library example 
 APEX_O=apex.o zhash2.o list.o
@@ -39,7 +39,7 @@ APEX_T=apex.out
 all: apex
 
 clean:
-	rm -f $(APEX_O) $(APEX_T) $(BUFT_O) $(BUFT_A) $(MBOX_O) $(MBOX_A) $(MBOX_TEST_O) $(MBOX_TEST_T)
+	rm -f $(APEX_O) $(APEX_T) $(BUFT_O) $(BUFT_A) $(BASKET_O) $(BASKET_A) $(BASKET_TEST_O) $(BASKET_TEST_T)
 
 apex: $(APEX_O)
 	$(GCC) $(CFLAGS) $(APEX_O) -o $(APEX_T)
@@ -48,11 +48,11 @@ apex: $(APEX_O)
 buft: $(BUFT_O) # compile buf_t and build archive
 	ar rcs $(BUFT_A) $(BUFT_O)
 
-mbox: $(BUFT_O) $(MBOX_O) # compile buf_t and build archive
-	ar rcs $(MBOX_A) $(BUFT_O) $(MBOX_O)
+basket: $(BUFT_O) $(BASKET_O) # compile buf_t and build archive
+	ar rcs $(BASKET_A) $(BUFT_O) $(BASKET_O)
 
-test_mbox: $(MBOX_TEST_O) # compile buf_t and build archive
-	$(GCC) $(CFLAGS) $(MBOX_TEST_O) -o $(MBOX_TEST_T)
+test_basket: $(BASKET_TEST_O) # compile buf_t and build archive
+	$(GCC) $(CFLAGS) $(BASKET_TEST_O) -o $(BASKET_TEST_T)
 
 %.o:%.c
 	@echo "|>" $@...
