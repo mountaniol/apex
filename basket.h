@@ -44,17 +44,22 @@
  *
  */
 
+#define WATERMARK_BASKET (0xBAFFA779)
+#define WATERMARK_BOX (0xBAFFA773)
+
 typedef struct {
 	buf_t **bufs; /**< Array of buf_t structs */
 	buf_s64_t bufs_num; /**< Number of bufs in the array */
 } basket_t;
 
 typedef struct {
+	uint32_t watermark; /**< Watermark: filled with a predefined pattern WATERMARK_BOX */
 	uint32_t box_size; /** The< size of the box, not include ::box_size and ::box_checksum fields */
 	uint32_t box_checksum; /**< The checksum of box buffer, means ::box_dump field; This field is optional, and ignored if == 0 */
 } __attribute__((packed)) box_dump_t;
 
 typedef struct {
+	uint32_t watermark; /**< Watermark: filled with a predefined pattern WATERMARK_BASKET */
 	uint32_t total_len; /**< Total length of this buffer, including 'total_len' field */
 	uint32_t boxes_num; /**< Number of Boxed in this buffer */
 	uint32_t basket_checksum; /**< The checksum of box buffer, means ::box_dump field; This field is optional, and ignored if == 0 */
@@ -284,7 +289,7 @@ extern buf_t *basket_to_buf_t(basket_t *basket);
  *  		operation. The caller is own the memory and the
  *  		caller should release it.
  */
-extern basket_t *basket_from_but(const void *buf, const size_t size);
+extern basket_t *basket_from_buf(void *buf, const size_t size);
 
 /**
  * @author Sebastian Mountaniol (6/16/22)

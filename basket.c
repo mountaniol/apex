@@ -270,6 +270,9 @@ void *basket_to_buf(const basket_t *basket, size_t *size)
 	basket_send_header_t basket_buf_header;
 	box_dump_t           box_dump_header;
 
+	TESTP(basket, NULL);
+	TESTP(size, NULL);
+
 	/* Let's calculate required buffer size */
 
 	/* The box dump: this is a heade of the buffer */
@@ -295,6 +298,9 @@ void *basket_to_buf(const basket_t *basket, size_t *size)
 	basket_buf_header.total_len = buf_size;
 	basket_buf_header.boxes_num = basket->bufs_num;
 
+	/* Watermark: a predefined pattern. */
+	basket_buf_header.watermark = WATERMARK_BASKET;
+
 	/* TODO */
 	basket_buf_header.basket_checksum = 0;
 
@@ -307,6 +313,7 @@ void *basket_to_buf(const basket_t *basket, size_t *size)
 
 		/* Fill the header, for every box we create and fill the header */
 		box_dump_header.box_size = basket->bufs[i]->used;
+		box_dump_header.watermark = WATERMARK_BOX;
 
 		/* TODO */
 		box_dump_header.box_checksum = 0;
@@ -316,7 +323,7 @@ void *basket_to_buf(const basket_t *basket, size_t *size)
 		/* If this box is empty, we don't add any data and skip */
 		if (basket->bufs[i]->used == 0) continue;
 
-		memcpy (buf + buf_offset, basket->bufs[i]->data, basket->bufs[i]->used);
+		memcpy(buf + buf_offset, basket->bufs[i]->data, basket->bufs[i]->used);
 		buf_offset += basket->bufs[i]->used;
 	}
 
@@ -326,9 +333,59 @@ void *basket_to_buf(const basket_t *basket, size_t *size)
 	/* TODO */
 }
 
+basket_t *basket_from_buf(void *buf, const size_t size)
+{
+	uint32_t             i;
+	uint32_t             buf_offset         = 0;
+	basket_t             *basket;
+	basket_send_header_t *basket_buf_header;
+	box_dump_t           *box_dump_header;
+
+	TESTP(buf, NULL);
+	if (size < sizeof(basket_send_header_t)) {
+		DE("Wrong size: less than size of structure basket_send_header_t\n");
+		return NULL;
+	}
+
+	basket_buf_header = (basket_send_header_t *)buf;
+	if (WATERMARK_BASKET != basket_buf_header->watermark) {
+		DE("Wrong buffer: wrong watermark. Expected %X but it is %X\n", WATERMARK_BASKET, basket_buf_header->watermark);
+		return NULL;
+	}
+
+	basket = basket_new(basket_buf_header->boxes_num);
+	TESTP(basket, NULL);
+
+	buf_offset = sizeof(basket_send_header_t);
+
+	for (i = 0; i < basket_buf_header->boxes_num; i++) {
+		box_dump_header = buf + buf_offset;
+
+		if (WATERMARK_BOX != box_dump_header->watermark) {
+			DE("Wrong box: wrong watermark. Expected %X but it is %X\n", WATERMARK_BOX, box_dump_header->watermark);
+			basket_release(basket);
+			return NULL;
+		}
+
+		buf_offset += sizeof(box_dump_t);
+
+		if (0 == box_dump_header->box_size) {
+			continue;
+		}
+
+		box_add_to_tail(basket, i, ((char *) buf + buf_offset), box_dump_header->box_size);
+		buf_offset += box_dump_header->box_size;
+	}
+
+	return basket;
+}
+
 /* This function creates a flat buffer ready for sending */
 buf_t *basket_to_buf_t(__attribute__((unused)) basket_t *basket)
 {
+	//basket_send_header_t *basket_buf_header;
+	//box_dump_t           *box_dump_header;
+
 	return NULL;
 	/* TODO */
 }
