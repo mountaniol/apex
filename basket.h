@@ -96,8 +96,8 @@ extern ret_t basket_set_box(basket_t *basket, buf_u32_t box_num, buf_t *box);
  */
 extern buf_t *basket_get_last_box(const basket_t *basket);
 
-extern buf_s64_t basket_get_boxes_count(const basket_t *basket);
-extern ret_t basket_set_number_of_buffers(basket_t *basket, const buf_u32_t number);
+// extern buf_s64_t basket_get_boxes_count(const basket_t *basket);
+// extern ret_t basket_set_boxes_count(basket_t *basket, const buf_u32_t number);
 /*** Basket create / release ***/
 
 /**
@@ -154,23 +154,22 @@ extern ret_t box_add_new(basket_t *basket);
 
 /**
  * @author Sebastian Mountaniol (6/12/22)
- * @brief Insert a new box after the box "num"
+ * @brief Insert a new box after the box "after"
  * @param basket_t* basket  The Basket object to insert the new
  *  			  box
- * @param uint32_t* after The number of box after which the new
+ * @param uint32_t* after The index of box after which the new
  *  			  box should be inserted. WARNING: The boxes
  *  			  after the box 'after' will be shifted and
- *  			  change their numbers. WARNING: The first box
- *  			  is '0'
- * @param uint32_t* num How many boxes to insert
+ *  			  change their numbers.<br>
+ *  			  WARNING: The index of a box starts from '0'
  * @return ret_t OK on success
  * @details If you have a Basket with 5 boxes, and you insert
- *  		one new box after the existing box 3, then box 4
+ *  		a new box after the existing box 3, then box 4
  *  		becomes box 5, and the box 5 becomes box 6; It
  *  		means, this operation shifts all boxes after the box
  *  		'after'.
  */
-extern ret_t box_insert_after(basket_t *basket, const uint32_t after, const uint32_t num);
+extern ret_t box_insert_after(basket_t *basket, const uint32_t after);
 
 /**
  * @author Sebastian Mountaniol (6/12/22)

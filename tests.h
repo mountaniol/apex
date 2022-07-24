@@ -23,6 +23,8 @@
 #define TRY_ABORT() do{  DE("Try/Abort: Abort disabled in %s +%d\n", __FILE__, __LINE__); } while(0)
 #endif /* ABORT_ON_ERROR */
 
+#define ABORT_OR_RETURN(x) do{TRY_ABORT(); return x;} while(0)
+
 /* This macro prints message and abort execution */
 #define MES_ABORT(x) do { DDE("Abort: %s\n", #x); abort(); } while(0)
 

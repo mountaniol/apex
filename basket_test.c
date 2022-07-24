@@ -21,9 +21,9 @@ static basket_t *basket_new_and_several_boxes(uint32_t num)
 	}
 
 	/* Check that asked number of boxes are allocated */
-	if (num != basket_get_boxes_count(basket)) {
-		DE("[TEST] Allocated mbox, but wrong num of boxes: asked %u, allocated %ld\n",
-		   num, basket_get_boxes_count(basket));
+	if (num != basket->bufs_num) {
+		DE("[TEST] Allocated mbox, but wrong num of boxes: asked %u, allocated %u\n",
+		   num, basket->bufs_num);
 		abort();
 	}
 
