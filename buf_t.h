@@ -62,6 +62,7 @@ typedef int ret_t;
  */
 
 typedef int64_t buf_s64_t;
+typedef uint32_t buf_u32_t;
 
 /**
  * Simple struct to hold a buffer / string and its size / lenght
@@ -75,6 +76,15 @@ typedef struct {
 /** If there is 'abort on error' is set, this macro stops
  *  execution and generates core file */
 // #define TRY_ABORT() do{ if(0 != bug_get_abort_flag()) {DE("Abort in %s +%d\n", __FILE__, __LINE__);abort();} } while(0)
+
+/**
+ * @author Sebastian Mountaniol (7/21/22)
+ * @brief Print out a buf internals - used, room, pointers
+ * @param const buf_t* buf   
+ * @param const char* mes   
+ * @details 
+ */
+extern void buf_dump(const buf_t *buf, const char *mes);
 
 /**
  * @author Sebastian Mountaniol (01/06/2020)
@@ -104,8 +114,7 @@ extern ret_t buf_data_set(buf_t *buf, char *data, const buf_s64_t size, const bu
  *  		"data" buffer still belongs to the "buf_t"; the
  *  		caller just gets pointer of this buffer.
  */
-extern void *buf_data_take(buf_t *buf);
-
+extern void *buf_data_take(const buf_t *buf);
 
 /**
  * @author Sebastian Mountaniol (12/19/21)
@@ -129,7 +138,7 @@ extern ret_t buf_is_data_null(buf_t *buf);
  * 	Returns EINVAL if the 'buf' == NULL.
  * 	Returns EBAD if this buffer is invalid.
  */
-extern ret_t buf_is_valid(buf_t *buf);
+extern ret_t buf_is_valid(const buf_t *buf, const char *who, const int line);
 
 /**
  * @func buf_t* buf_new(size_t size)
@@ -140,19 +149,6 @@ extern ret_t buf_is_valid(buf_t *buf);
  * @return buf_t* New buf_t structure.
  */
 extern buf_t *buf_new(buf_s64_t size);
-
-/**
- * @author Sebastian Mountaniol (16/06/2020)
- * @func err_t buf_set_data_ro(buf_t *buf, char *data, size_t size)
- * @brief Set a data into buffer and lock the buffer, i.e. turn the buf into "read-only".
- * @param buf_t * buf Buffer to set read-only
- * @param char * data Data the buf_t will contain. It is legal if this parameter == NULL
- * @param size_t size Size of the buffer. If data == NULL this argument must be 0
- * @return err_t EOK on success
- * 	Returns -ECANCELED if data == NULL but size > 0
- * 	Returns -EACCESS if this buffer already marked as read-only.
- */
-extern ret_t buf_set_data_ro(buf_t *buf, char *data, buf_s64_t size);
 
 /**
  * @author Sebastian Mountaniol (01/06/2020)
@@ -287,7 +283,7 @@ ret_t buf_replace(buf_t *buf, const char *new_data, const buf_s64_t size );
  * @return ssize_t Number of bytes used on success
  * 	EINVAL if the 'buf' == NULL
  */
-extern buf_s64_t buf_used_take(buf_t *buf);
+extern buf_s64_t buf_used_take(const buf_t *buf);
 
 /**
  * @author Sebastian Mountaniol (12/16/21)
@@ -338,7 +334,7 @@ extern void buf_used_dec(buf_t *buf, buf_s64_t dec);
  * @return ssize_t How many bytes allocated for this 'buf'
  * 	EINVAL if the 'buf' == NULL
  */
-extern buf_s64_t buf_room_take(buf_t *buf);
+extern buf_s64_t buf_room_take(const buf_t *buf);
 
 /**
  * @author Sebastian Mountaniol (12/16/21)
@@ -405,28 +401,13 @@ extern ret_t buf_pack(buf_t *buf);
  */
 extern ret_t buf_detect_used(buf_t *buf);
 
-/**
- * @author Sebastian Mountaniol (18/06/2020)
- * @func size_t buf_recv(buf_t *buf, const int socket, const
- *  	 size_t expected, const int flags)
- * @brief Receive from socket into buffer
- * @param buf_t * buf Buffer to save received data
- * @param const int socket Opened socket
- * @param const size_t expected How many bytes expected
- * @param const int flags Flags to pass to recv() function
- * @return ssize_t Number of received bytes
- * 	EINVAL if buf is NULL, else returns status of recv() function
- */
-extern size_t buf_recv(buf_t *buf, const int socket, const buf_s64_t expected, const int flags);
-
 /* Additional defines */
 #ifdef BUF_DEBUG
-
-	#define BUF_TEST(buf) do {if (0 != buf_is_valid(buf)){fprintf(stderr, "######>>> Buffer invalid here: func: %s file: %s + %d [allocated here: %s +%d %s()]\n", __func__, __FILE__, __LINE__, buf->filename, buf->line, buf->func);}} while (0)
+	#define BUF_TEST(buf) do {if (0 != buf_is_valid(buf, __func__, __LINE__)){fprintf(stderr, "######>>> Buffer invalid here: func: %s file: %s + %d [allocated here: %s +%d %s()]\n", __func__, __FILE__, __LINE__, buf->filename, buf->line, buf->func);}} while (0)
 	#define BUF_DUMP(buf) do {DD("[BUFDUMP]: [%s +%d] buf = %p, data = %p, room = %u, used = %u [allocated here: %s +%d %s()]\n", __func__, __LINE__, buf, buf->data, buf->room, buf->used, buf->filename, buf->line, buf->func);} while(0)
 	#define BUF_DUMP_ERR(buf) do {DD("[BUFDUMP]: [%s +%d] buf = %p, data = %p, room = %u, used = %u [allocated here: %s +%d %s()]\n", __func__, __LINE__, buf, buf->data, buf->room, buf->used, buf->filename, buf->line, buf->func);} while(0)
 #else
-	#define BUF_TEST(buf) do {if (0 != buf_is_valid(buf)){fprintf(stderr, "######>>> Buffer test invalid here: func: %s file: %s + %d\n", __func__, __FILE__, __LINE__);}} while (0)
+	#define BUF_TEST(buf) do {if (0 != buf_is_valid(buf, __func__, __LINE__)){fprintf(stderr, "######>>> Buffer test invalid here: func: %s file: %s + %d\n", __func__, __FILE__, __LINE__);}} while (0)
 	#define BUF_DUMP(buf) do {DD("[BUFDUMP]: [%s +%d] buf = %p, data = %p, room = %u, used = %u\n", __func__, __LINE__, buf, buf->data, buf->room, buf->used);} while(0)
 	#define BUF_DUMP_ERR(buf) do {DD("[BUFDUMP]: [%s +%d] buf = %p, data = %p, room = %u, used = %u\n", __func__, __LINE__, buf, buf->data, buf->room, buf->used);} while(0)
 

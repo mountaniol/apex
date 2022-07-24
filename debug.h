@@ -25,6 +25,8 @@
         #undef DDD0
 #endif
 
+#define PR(fmt, ...) do{printf(fmt, ##__VA_ARGS__);}while(0)
+
 #define _D_PRINT(fmt, ...) do{printf("%s +%d : ", __func__, __LINE__); printf(fmt, ##__VA_ARGS__); }while(0 == 1)
 #define _D_PRINT_ERR(fmt, ...) do{fprintf(stderr, "%s +%d [ERR] : ", __func__, __LINE__); printf(fmt, ##__VA_ARGS__); }while(0 == 1)
 
