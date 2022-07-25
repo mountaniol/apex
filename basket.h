@@ -64,8 +64,8 @@
 
 typedef struct {
 	void **boxes; /**< Array of buf_t structs */
-	buf_u32_t boxes_used; /**< Number of bufs in the array */
-	buf_u32_t boxes_allocated; /**< For internal use: how many buf_t pointers are allocated in the 'bufs' */
+	box_u32_t boxes_used; /**< Number of bufs in the array */
+	box_u32_t boxes_allocated; /**< For internal use: how many buf_t pointers are allocated in the 'bufs' */
 } basket_t;
 
 typedef struct {
@@ -83,8 +83,8 @@ typedef struct {
 
 /*** Getter / Setter functions ***/
 /* We populate these function for test purposes. Should not be used out of test */
-extern buf_t *basket_get_box(const basket_t *basket, buf_u32_t box_index);
-extern ret_t basket_set_box(basket_t *basket, buf_u32_t box_num, buf_t *box);
+extern box_t *basket_get_box(const basket_t *basket, box_u32_t box_index);
+extern ret_t basket_set_box(basket_t *basket, box_u32_t box_num, box_t *box);
 
 /**
  * @author Sebastian Mountaniol (7/21/22)
@@ -186,7 +186,7 @@ extern ret_t box_insert_after(basket_t *basket, const uint32_t after);
  *  		to place of box 2, and the previous box 2 will
  *  		become box 4. All other boxes stay untouched.
  */
-extern ret_t box_swap(basket_t *basket, const buf_u32_t first, const buf_u32_t second);
+extern ret_t box_swap(basket_t *basket, const box_u32_t first, const box_u32_t second);
 
 /**
  * @author Sebastian Mountaniol (6/12/22)
@@ -200,7 +200,7 @@ extern ret_t box_swap(basket_t *basket, const buf_u32_t first, const buf_u32_t s
  *  		box 5. The box 3 after this operation will be an
  *  		empty box.
  */
-extern ret_t box_remove(basket_t *basket, const buf_u32_t num);
+extern ret_t box_remove(basket_t *basket, const box_u32_t num);
 
 /**
  * @author Sebastian Mountaniol (6/12/22)
@@ -217,7 +217,7 @@ extern ret_t box_remove(basket_t *basket, const buf_u32_t num);
  *  		memory of (2 + 3), the box 3 will be an empty box,
  *  		box 4 and 5 will stay boxes 4 and 5
  */
-extern ret_t box_merge(basket_t *basket, const buf_u32_t src, const buf_u32_t dst);
+extern ret_t box_merge(basket_t *basket, const box_u32_t src, const box_u32_t dst);
 
 /**
  * @author Sebastian Mountaniol (6/12/22)
@@ -242,7 +242,7 @@ extern ret_t box_merge(basket_t *basket, const buf_u32_t src, const buf_u32_t ds
  *  		previous box 5 becomes box 6. TODO: An diagramm
  *  		should be added to explain it visually.
  */
-extern ret_t box_bisect(basket_t *basket, const buf_u32_t box_num, const size_t from_offset);
+extern ret_t box_bisect(basket_t *basket, const box_u32_t box_num, const size_t from_offset);
 
 /**
  * @author Sebastian Mountaniol (6/12/22)
@@ -291,7 +291,7 @@ void *basket_to_buf(const basket_t *basket, size_t *size);
  * @return buf_t* 
  * @details 
  */
-extern buf_t *basket_to_buf_t(basket_t *basket);
+extern box_t *basket_to_buf_t(basket_t *basket);
 
 /**
  * @author Sebastian Mountaniol (7/17/22)
@@ -324,7 +324,7 @@ extern basket_t *basket_from_buf(void *buf, const size_t size);
  * @details The buf_t is untouched, disregarding the operation
  *  		success or failure. The caller owns this memory.
  */
-extern basket_t *basket_from_buf_t(const buf_t *buf);
+extern basket_t *basket_from_buf_t(const box_t *buf);
 
 /*** A single sector operation - add, remove, modifu sector's memory ***/
 
@@ -339,7 +339,7 @@ extern basket_t *basket_from_buf_t(const buf_t *buf);
  * @details The new box will have sequentional number. If you already have 5 boxes,
  * the newely created box will have index "5," means it will be the sixts box. The boxes index starts from 0.
  */
-extern ssize_t box_new_from_data(basket_t *basket, const void *buffer, const buf_u32_t buffer_size);
+extern ssize_t box_new_from_data(basket_t *basket, const void *buffer, const box_u32_t buffer_size);
 
 /**
  * @author Sebastian Mountaniol (7/12/22)
@@ -356,7 +356,7 @@ extern ssize_t box_new_from_data(basket_t *basket, const void *buffer, const buf
  *  		after this operation the box 1 will contain "Blue
  *  		car and yellow bike"
  */
-extern ret_t box_add_to_tail(basket_t *basket, const buf_u32_t box_num, const void *buffer, const size_t buffer_size);
+extern ret_t box_add_to_tail(basket_t *basket, const box_u32_t box_num, const void *buffer, const size_t buffer_size);
 
 /**
  * @author Sebastian Mountaniol (7/12/22)
@@ -374,7 +374,7 @@ extern ret_t box_add_to_tail(basket_t *basket, const buf_u32_t box_num, const vo
  *  		data. THe original 'buffer' is unouched and it is up
  *  		to caller to release it.
  */
-extern ret_t box_replace_data(basket_t *basket, const buf_u32_t box_num, const void *buffer, const size_t buffer_size);
+extern ret_t box_replace_data(basket_t *basket, const box_u32_t box_num, const void *buffer, const size_t buffer_size);
 
 /**
  * @author Sebastian Mountaniol (7/12/22)
@@ -389,7 +389,7 @@ extern ret_t box_replace_data(basket_t *basket, const buf_u32_t box_num, const v
  *  		WARNING: Do not release this memory! You do not own
  *  		it! If you do, the basket_release will fail.
  */
-extern void *box_data_ptr(const basket_t *basket, const buf_u32_t box_num);
+extern void *box_data_ptr(const basket_t *basket, const box_u32_t box_num);
 
 /**
  * @author Sebastian Mountaniol (7/12/22)
@@ -403,7 +403,7 @@ extern void *box_data_ptr(const basket_t *basket, const buf_u32_t box_num);
  * @details You probably need this function when use
  *  		::box_data_ptr() function
  */
-extern ssize_t box_data_size(const basket_t *basket, const buf_u32_t box_num);
+extern ssize_t box_data_size(const basket_t *basket, const box_u32_t box_num);
 
 /**
  * @author Sebastian Mountaniol (7/12/22)
@@ -414,7 +414,7 @@ extern ssize_t box_data_size(const basket_t *basket, const buf_u32_t box_num);
  * @return ret_t OK on success, a negative error on failure
  * @details 
  */
-extern ret_t box_data_free(basket_t *basket, const buf_u32_t box_num);
+extern ret_t box_data_free(basket_t *basket, const box_u32_t box_num);
 
 /**
  * @author Sebastian Mountaniol (7/14/22)
@@ -426,7 +426,7 @@ extern ret_t box_data_free(basket_t *basket, const buf_u32_t box_num);
  *  	   or on an error
  * @details 
  */
-extern void *box_steal_data(basket_t *basket, const buf_u32_t box_num);
+extern void *box_steal_data(basket_t *basket, const box_u32_t box_num);
 
 /**
  * @author Sebastian Mountaniol (7/19/22)

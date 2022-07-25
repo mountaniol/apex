@@ -51,7 +51,7 @@ static int box_new_from_data_test(void)
 	size_t    internal_buf_size;
 	ssize_t   buf_num;
 	char      *internal_data;
-	buf_s64_t lorem_ipsum_size  = (buf_s64_t)strnlen(lorem_ipsum, 4096);
+	box_s64_t lorem_ipsum_size  = (box_s64_t)strnlen(lorem_ipsum, 4096);
 	int       basket_sz;
 
 	/* Iterate array boxes_in_test[], and use each value of this array as a number of boxes in basket */
@@ -126,7 +126,7 @@ static int box_new_from_data_simple_test(void)
 	size_t    internal_buf_size;
 	ssize_t   buf_num;
 	char      *internal_data;
-	buf_s64_t lorem_ipsum_size  = (buf_s64_t)strnlen(lorem_ipsum, 4096);
+	box_s64_t lorem_ipsum_size  = (box_s64_t)strnlen(lorem_ipsum, 4096);
 	int       basket_sz;
 
 	/* Create an empty basket and add a new box */

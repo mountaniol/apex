@@ -47,7 +47,8 @@
  *
  */
 
-void buf_dump(const buf_t *buf, const char *mes)
+#ifdef ENABLE_BUF_DUMP
+void buf_dump(const box_t *buf, const char *mes)
 {
 	TESTP_ABORT(buf);
 	TESTP_ABORT(mes);
@@ -68,28 +69,33 @@ void buf_dump(const buf_t *buf, const char *mes)
 	DD("Buf_t room:           %ld\n", buf_room_take(buf));
 	DD("========================\n");
 }
+#else
+void buf_dump(__attribute__((unused)) const box_t *buf, __attribute__((unused)) const char *mes)
+{
+}
+#endif /* BUF_DUMP */
 
 /*** Get and Set value of 'used' field in the buf_t ***/
 
-buf_s64_t buf_used_take(const buf_t *buf)
+box_s64_t buf_used_take(const box_t *buf)
 {
 	TESTP_ABORT(buf);
 	return (buf->used);
 }
 
-void buf_used_set(buf_t *buf, buf_s64_t used)
+void buf_used_set(box_t *buf, box_s64_t used)
 {
 	TESTP_ABORT(buf);
 	buf->used = used;
 }
 
-void buf_used_inc(buf_t *buf, buf_s64_t inc)
+void buf_used_inc(box_t *buf, box_s64_t inc)
 {
 	TESTP_ABORT(buf);
 	buf->used += inc;
 }
 
-void buf_used_dec(buf_t *buf, buf_s64_t dec)
+void buf_used_dec(box_t *buf, box_s64_t dec)
 {
 	TESTP_ABORT(buf);
 	if (dec > buf_used_take(buf)) {
@@ -109,7 +115,7 @@ void buf_used_dec(buf_t *buf, buf_s64_t dec)
 }
 
 /* Validate sanity of buf_t - common for all buffers */
-ret_t buf_is_valid(const buf_t *buf, const char *who, const int line)
+ret_t buf_is_valid(const box_t *buf, const char *who, const int line)
 {
 	TESTP_ABORT(buf);
 
@@ -145,15 +151,15 @@ ret_t buf_is_valid(const buf_t *buf, const char *who, const int line)
 	return (OK);
 }
 
-buf_t *buf_new(buf_s64_t size)
+box_t *buf_new(box_s64_t size)
 {
-	buf_t  *buf;
+	box_t  *buf;
 
 	/* The real size of allocated  buffer can be more than used asked,
 	   the canary and the checksum space could be added */
 	size_t real_size = size;
 
-	buf = (buf_t *)zmalloc(sizeof(buf_t));
+	buf = (box_t *)zmalloc(sizeof(box_t));
 	T_RET_ABORT(buf, NULL);
 
 	/* If a size is given than allocate a data */
@@ -182,7 +188,7 @@ buf_t *buf_new(buf_s64_t size)
 	return (buf);
 }
 
-ret_t buf_data_set(buf_t *buf, char *data, const buf_s64_t size, const buf_s64_t len)
+ret_t buf_data_set(box_t *buf, char *data, const box_s64_t size, const box_s64_t len)
 {
 	TESTP_ABORT(buf);
 	TESTP_ABORT(data);
@@ -193,7 +199,7 @@ ret_t buf_data_set(buf_t *buf, char *data, const buf_s64_t size, const buf_s64_t
 	return (OK);
 }
 
-void *buf_data_steal(buf_t *buf)
+void *buf_data_steal(box_t *buf)
 {
 	void *data;
 	TESTP_ABORT(buf);
@@ -204,7 +210,7 @@ void *buf_data_steal(buf_t *buf)
 	return (data);
 }
 
-void *buf_data_steal_and_release(buf_t *buf)
+void *buf_data_steal_and_release(box_t *buf)
 {
 	void *data;
 	TESTP_ABORT(buf);
@@ -216,13 +222,13 @@ void *buf_data_steal_and_release(buf_t *buf)
 	return (data);
 }
 
-void *buf_data_take(const buf_t *buf)
+void *buf_data_take(const box_t *buf)
 {
 	TESTP_ABORT(buf);
 	return (buf->data);
 }
 
-ret_t buf_is_data_null(buf_t *buf)
+ret_t buf_is_data_null(box_t *buf)
 {
 	TESTP_ABORT(buf);
 	if (NULL == buf->data) {
@@ -232,7 +238,7 @@ ret_t buf_is_data_null(buf_t *buf)
 }
 
 /* This is an internal function. Here we realloc the internal buf_t buffer */
-static ret_t buf_realloc(buf_t *buf, size_t new_size)
+static ret_t buf_realloc(box_t *buf, size_t new_size)
 {
 	size_t room         = 0;
 	size_t size_to_copy = 0;
@@ -245,9 +251,9 @@ static ret_t buf_realloc(buf_t *buf, size_t new_size)
 
 	// buf_dump(buf, "in Buf Realloc, before");
 
-	DD("Going to allocate new buffer %zu size; room = %zu, size_to_copy = %zu\n", new_size, room, size_to_copy);
+	//DDD("Going to allocate new buffer %zu size; room = %zu, size_to_copy = %zu\n", new_size, room, size_to_copy);
 	tmp = malloc(new_size);
-	DD("Allocated size %zu\n", new_size);
+	//DDD("Allocated size %zu\n", new_size);
 
 	if (NULL == tmp) {
 		DE("New memory alloc failed: current size = %zu, asked size = %zu\n", buf->room, new_size);
@@ -266,7 +272,7 @@ static ret_t buf_realloc(buf_t *buf, size_t new_size)
 }
 
 /* This is an internal function. Here we realloc the internal buf_t buffer */
-static ret_t buf_realloc_old(buf_t *buf, size_t new_size)
+static ret_t buf_realloc_old(box_t *buf, size_t new_size)
 {
 	void   *tmp;
 	TESTP_ABORT(buf);
@@ -289,7 +295,7 @@ static ret_t buf_realloc_old(buf_t *buf, size_t new_size)
 	return OK;
 }
 
-ret_t buf_room_add_memory(buf_t *buf, buf_s64_t sz)
+ret_t buf_room_add_memory(box_t *buf, box_s64_t sz)
 {
 	size_t original_room_size;
 	TESTP_ABORT(buf);
@@ -327,10 +333,10 @@ ret_t buf_room_add_memory(buf_t *buf, buf_s64_t sz)
 }
 
 /* Return how much bytes is available in the buf_t */
-buf_s64_t buf_room_avaialable_take(buf_t *buf)
+box_s64_t buf_room_avaialable_take(box_t *buf)
 {
-	buf_s64_t m_used = -1;
-	buf_s64_t m_room = -1;
+	box_s64_t m_used = -1;
+	box_s64_t m_room = -1;
 	TESTP_ABORT(buf);
 	m_used = buf_used_take(buf);
 	if (m_used < 0) {
@@ -348,7 +354,7 @@ buf_s64_t buf_room_avaialable_take(buf_t *buf)
 	return m_room - m_used;
 }
 
-ret_t buf_room_assure(buf_t *buf, buf_s64_t expect)
+ret_t buf_room_assure(box_t *buf, box_s64_t expect)
 {
 	TESTP_ABORT(buf);
 
@@ -367,7 +373,7 @@ ret_t buf_room_assure(buf_t *buf, buf_s64_t expect)
 	return (buf_room_add_memory(buf, expect));
 }
 
-ret_t buf_clean_and_reset(buf_t *buf)
+ret_t buf_clean_and_reset(box_t *buf)
 {
 	TESTP_ABORT(buf);
 
@@ -383,11 +389,11 @@ ret_t buf_clean_and_reset(buf_t *buf)
 		buf->data = NULL;
 	}
 
-	memset(buf, 0, sizeof(buf_t));
+	memset(buf, 0, sizeof(box_t));
 	return (OK);
 }
 
-ret_t buf_free(buf_t *buf)
+ret_t buf_free(box_t *buf)
 {
 	TESTP_ABORT(buf);
 
@@ -401,14 +407,14 @@ ret_t buf_free(buf_t *buf)
 		TFREE_SIZE(buf->data, buf_used_take(buf));
 	}
 	/* Release the buf_t struct */
-	TFREE_SIZE(buf, sizeof(buf_t));
+	TFREE_SIZE(buf, sizeof(box_t));
 	return (OK);
 }
 
 /* Copy the given buffer "new_data" at tail of the buf_t */
-ret_t buf_add(buf_t *buf /* Buf_t to add into */,
+ret_t buf_add(box_t *buf /* Buf_t to add into */,
 			  const char *new_data /* Buffer to add */,
-			  const buf_s64_t sz /* Size of the buffer to add */)
+			  const box_s64_t sz /* Size of the buffer to add */)
 {
 	TESTP_ABORT(buf);
 	TESTP_ABORT(new_data);
@@ -434,7 +440,7 @@ ret_t buf_add(buf_t *buf /* Buf_t to add into */,
 	return (OK);
 }
 
-ret_t buf_merge(buf_t *dst, buf_t *src)
+ret_t buf_merge(box_t *dst, box_t *src)
 {
 	ret_t rc;
 	TESTP_ABORT(dst);
@@ -454,11 +460,11 @@ ret_t buf_merge(buf_t *dst, buf_t *src)
 }
 
 /* Copy the given buffer "new_data" at tail of the buf_t */
-ret_t buf_replace(buf_t *buf /* Buf_t to replace data in */,
+ret_t buf_replace(box_t *buf /* Buf_t to replace data in */,
 				  const char *new_data /* Buffer to copy into the buf_t */,
-				  const buf_s64_t size /* Size of the new buffer to set */)
+				  const box_s64_t size /* Size of the new buffer to set */)
 {
-	buf_s64_t current_room_size;
+	box_s64_t current_room_size;
 
 	/* NOTE: This function is not dedicated to reset the buf_t:
 	 * It means, this function does not accept new_data == NULL + size == 0.
@@ -494,27 +500,27 @@ ret_t buf_replace(buf_t *buf /* Buf_t to replace data in */,
 	return (OK);
 }
 
-buf_s64_t buf_room_take(const buf_t *buf)
+box_s64_t buf_room_take(const box_t *buf)
 {
 	TESTP_ABORT(buf);
 	return (buf->room);
 }
 
-void buf_room_set(buf_t *buf, buf_s64_t room)
+void buf_room_set(box_t *buf, box_s64_t room)
 {
 	TESTP_ABORT(buf);
 	DDD("Setting buffer room: %ld\n", room);
 	buf->room = room;
 }
 
-void buf_room_inc(buf_t *buf, buf_s64_t inc)
+void buf_room_inc(box_t *buf, box_s64_t inc)
 {
 	TESTP_ABORT(buf);
 	DDD("Inc buffer room: %ld + %ld\n", buf->room, inc);
 	buf->room += inc;
 }
 
-void buf_room_dec(buf_t *buf, buf_s64_t dec)
+void buf_room_dec(box_t *buf, box_s64_t dec)
 {
 	TESTP_ABORT(buf);
 	if (dec > buf_room_take(buf)) {
@@ -531,7 +537,7 @@ void buf_room_dec(buf_t *buf, buf_s64_t dec)
 	}
 }
 
-ret_t buf_pack(buf_t *buf)
+ret_t buf_pack(box_t *buf)
 {
 	TESTP_ABORT(buf);
 
@@ -567,3 +573,5 @@ ret_t buf_pack(buf_t *buf)
 	BUF_TEST(buf);
 	return (OK);
 }
+
+
