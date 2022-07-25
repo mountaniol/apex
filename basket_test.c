@@ -21,9 +21,9 @@ static basket_t *basket_new_and_several_boxes(uint32_t num)
 	}
 
 	/* Check that asked number of boxes are allocated */
-	if (num != basket->bufs_num) {
+	if (num != basket->boxes_used) {
 		DE("[TEST] Allocated mbox, but wrong num of boxes: asked %u, allocated %u\n",
-		   num, basket->bufs_num);
+		   num, basket->boxes_used);
 		abort();
 	}
 
@@ -210,10 +210,105 @@ static int box_new_from_data_simple_test(void)
 	return 0;
 }
 
+
+void basket_collapse_in_place_test(void)
+{
+	ret_t      rc;
+	basket_t   *basket     = NULL;
+	char * box0_data_ptr;
+
+	const char *string_all = "It was the White Rabbit, trotting slowly back again, and looking anxiously about as it went, as if it had lost something; and she heard it muttering to itself 'The Duchess! The Duchess! Oh my dear paws! Oh my fur and whiskers! She’ll get me executed, as sure as ferrets are ferrets! Where can I have dropped them, I wonder?' Alice guessed in a moment that it was looking for the fan and the pair of white kid gloves, and she very good-naturedly began hunting about for them, but they were nowhere to be seen—everything seemed to have changed since her swim in the pool, and the great hall, with the glass table and the little door, had vanished completely.";
+	const char *string_1   = "It was the White Rabbit, trotting slowly back again, ";
+	const char *string_2   = "and looking anxiously about as it went, as if it had lost something; ";
+	const char *string_3   = "and she heard it muttering to itself 'The Duchess! The Duchess! Oh my dear paws! Oh my fur and whiskers! ";
+	const char *string_4   = "She’ll get me executed, as sure as ferrets are ferrets! Where can I have dropped them, I wonder?' ";
+	const char *string_5   = "Alice guessed in a moment that it was looking for the fan and the pair of white kid gloves, ";
+	const char *string_6   = "and she very good-naturedly began hunting about for them, but they were nowhere to be seen—everything ";
+	const char *string_7   = "seemed to have changed since her swim in the pool, and the great hall, ";
+	const char *string_8   = "with the glass table and the little door, had vanished completely.";
+
+	basket = basket_new();
+	if (NULL == basket) {
+		DE("[TEST] Failed a basket creation\n");
+		abort();
+	}
+
+	rc = box_new_from_data(basket, string_1, strlen(string_1));
+	if (rc < 0) {
+		DE("[TEST] Failed adding a string to a box\n");
+		abort();
+	}
+
+	rc = box_new_from_data(basket, string_2, strlen(string_2));
+	if (rc < 0) {
+		DE("[TEST] Failed adding a string to a box\n");
+		abort();
+	}
+
+	rc = box_new_from_data(basket, string_3, strlen(string_3));
+	if (rc < 0) {
+		DE("[TEST] Failed adding a string to a box\n");
+		abort();
+	}
+
+	rc = box_new_from_data(basket, string_4, strlen(string_4));
+	if (rc < 0) {
+		DE("[TEST] Failed adding a string to a box\n");
+		abort();
+	}
+
+	rc = box_new_from_data(basket, string_5, strlen(string_5));
+	if (rc < 0) {
+		DE("[TEST] Failed adding a string to a box\n");
+		abort();
+	}
+
+	rc = box_new_from_data(basket, string_6, strlen(string_6));
+	if (rc < 0) {
+		DE("[TEST] Failed adding a string to a box\n");
+		abort();
+	}
+
+	rc = box_new_from_data(basket, string_7, strlen(string_7));
+	if (rc < 0) {
+		DE("[TEST] Failed adding a string to a box\n");
+		abort();
+	}
+
+	rc = box_new_from_data(basket, string_8, strlen(string_8));
+	if (rc < 0) {
+		DE("[TEST] Failed adding a string to a box\n");
+		abort();
+	}
+
+	rc = basket_collapse_in_place(basket);
+	if (OK != rc) {
+		DE("[TEST] Failed basket collapsing in place\n");
+		abort();
+	}
+
+	box0_data_ptr = box_data_ptr(basket, 0);
+	if (NULL == box0_data_ptr) {
+		DE("[TEST] Failed to get box[0] data ptr\n");
+		abort();
+	}
+
+	if (0 != strncmp(string_all, box0_data_ptr, strnlen(string_all, 1024))) {
+		DE("[TEST] Failed compare string in box[0] with string_all\n");
+		abort();
+	}
+
+	if(OK != basket_release(basket)) {
+		DE("[TEST] Failed basket releasing\n");
+		abort();
+	}
+}
+
 int main(void)
 {
 	// basket_new_test();
 	//box_new_from_data_simple_test();
-	box_new_from_data_test();
+	//box_new_from_data_test();
+	basket_collapse_in_place_test();
 }
 

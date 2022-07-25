@@ -63,9 +63,9 @@
 #define BASKET_BUFS_GROW_RATE (32)
 
 typedef struct {
-	void **bufs; /**< Array of buf_t structs */
-	buf_u32_t bufs_num; /**< Number of bufs in the array */
-	buf_u32_t bufs_allocated; /**< For internal use: how many buf_t pointers are allocated in the 'bufs' */
+	void **boxes; /**< Array of buf_t structs */
+	buf_u32_t boxes_used; /**< Number of bufs in the array */
+	buf_u32_t boxes_allocated; /**< For internal use: how many buf_t pointers are allocated in the 'bufs' */
 } basket_t;
 
 typedef struct {
@@ -94,7 +94,7 @@ extern ret_t basket_set_box(basket_t *basket, buf_u32_t box_num, buf_t *box);
  * @return buf_t* The last box, can be NULL if not set yet.
  * @details 
  */
-extern buf_t *basket_get_last_box(const basket_t *basket);
+//extern buf_t *basket_get_last_box(const basket_t *basket);
 
 // extern buf_s64_t basket_get_boxes_count(const basket_t *basket);
 // extern ret_t basket_set_boxes_count(basket_t *basket, const buf_u32_t number);

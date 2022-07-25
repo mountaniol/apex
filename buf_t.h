@@ -7,6 +7,10 @@
 #define BUF_NOISY
 #include <stdint.h>
 
+#ifndef MIN
+	#define MIN(a,b) ((a < b) ? a : b)
+#endif
+
 enum {
  	AGN = -2, /* "Try again" status */
  	BAD = -1,  /* Error status */
@@ -258,6 +262,22 @@ extern ret_t buf_free(buf_t *buf);
  */
 extern ret_t buf_add(buf_t *buf, const char *new_data, const buf_s64_t size);
 
+/**
+ * @author Sebastian Mountaniol (7/24/22)
+ * @brief Merge add data from 'src' buf to 'dst'
+ * @param buf_t* dst   Buffer to add data from 'src'
+ * @param const buf_t* src   Buffer to read data and add to
+ *  			'src'
+ * @return ret_t OK on success, all statuses of buf_add() on an
+ *  	   error
+ * @details The 'src' buffer will be freed after succesful
+ *  		operation;<br>
+ *  		-ECANCELED in case the 'src' buffer can not be
+ *  		cleaned.<br>
+ *  		In case the operation failed, the status of both
+ *  		'src' and 'dst' is undefined.
+ */
+extern ret_t buf_merge(buf_t *dst, buf_t *src);
 /**
  * @author Sebastian Mountaniol (7/17/22)
  * @brief Replace current data in the Buf_t to a new buffer

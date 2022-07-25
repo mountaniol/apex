@@ -111,6 +111,7 @@ ret_t buf_is_valid(const buf_t *buf, const char *who, const int line)
 	if (buf_used_take(buf) > buf_room_take(buf)) {
 		DE("/%s +%d/ : Invalid buf: buf->used (%ld) > buf->room (%ld)\n",
 		   who, line, buf_used_take(buf), buf_room_take(buf));
+		buf_dump(buf, "from buf_is_valid(), before terminating 1");
 		TRY_ABORT();
 		return (-ECANCELED);
 	}
@@ -120,6 +121,7 @@ ret_t buf_is_valid(const buf_t *buf, const char *who, const int line)
 	if ((NULL == buf->data) && (buf_room_take(buf) > 0)) {
 		DE("/%s +%d/ : Invalid buf: buf->data == NULL but buf->room > 0 (%ld) / buf->used (%ld)\n",
 		   who, line, buf_room_take(buf), buf_used_take(buf));
+		buf_dump(buf, "from buf_is_valid(), before terminating 2");
 		TRY_ABORT();
 		return (-ECANCELED);
 	}
@@ -127,6 +129,7 @@ ret_t buf_is_valid(const buf_t *buf, const char *who, const int line)
 	/* And vice versa: if buf->data != NULL the buf->room must be > 0 */
 	if ((NULL != buf->data) && (0 == buf_room_take(buf))) {
 		DE("/%s +%d/: Invalid buf: buf->data != NULL but buf->room == 0\n", who, line);
+		buf_dump(buf, "from buf_is_valid(), before terminating 3");
 		TRY_ABORT();
 		return (-ECANCELED);
 	}
@@ -224,6 +227,35 @@ ret_t buf_is_data_null(buf_t *buf)
 /* This is an internal function. Here we realloc the internal buf_t buffer */
 static ret_t buf_realloc(buf_t *buf, size_t new_size)
 {
+	size_t room          = (size_t)buf->room;
+	size_t size_to_copy  = MIN(room, new_size);
+	void   *tmp;
+
+	// buf_dump(buf, "in Buf Realloc, before");
+
+	DD("Going to allocate new buffer %zu size; room = %zu, size_to_copy = %zu\n", new_size, room, size_to_copy);
+	tmp = malloc(new_size);
+	DD("Allocated size %zu\n", new_size);
+
+	if (NULL == tmp) {
+		DE("New memory alloc failed: current size = %zu, asked size = %zu\n", buf->room, new_size);
+		ABORT_OR_RETURN(-ENOMEM);
+	}
+
+	/* The new size can be less than previous; so we use minimal between bif->room and new_size to copy data */
+	if (buf->data) {
+		memcpy(tmp, buf->data, size_to_copy);
+		free(buf->data);
+		buf->data = NULL;
+	}
+
+	buf->data = tmp;
+	return OK;
+}
+
+/* This is an internal function. Here we realloc the internal buf_t buffer */
+static ret_t buf_realloc_old(buf_t *buf, size_t new_size)
+{
 	void   *tmp = realloc(buf->data, new_size);
 
 	/* Case 1: realloc can't reallocate */
@@ -248,11 +280,10 @@ ret_t buf_room_add_memory(buf_t *buf, buf_s64_t sz)
 	size_t original_room_size;
 	T_RET_ABORT(buf, -EINVAL);
 
-	// buf_dump(buf, "Before adding memory");
+	buf_dump(buf, "buf_room_add_memory(): Before adding memory");
 	if (0 == sz) {
 		DE("Bad arguments: buf == NULL (%p) or size == 0 (%ld)\b", buf, sz);
-		TRY_ABORT();
-		return (-EINVAL);
+		ABORT_OR_RETURN(-EINVAL);
 	}
 
 	/* Save the */
@@ -260,12 +291,15 @@ ret_t buf_room_add_memory(buf_t *buf, buf_s64_t sz)
 
 	if (OK != buf_realloc(buf, original_room_size + sz)) {
 		DE("Can not reallocate buf->data\n");
-		TRY_ABORT();
-		return (-ENOMEM);
+		ABORT_OR_RETURN(-ENOMEM);
 	}
+
+	buf_dump(buf, "buf_room_add_memory(): After adding memory");
 
 	/* Clean newely allocated memory */
 	memset(buf->data + original_room_size, 0, sz);
+
+	buf_dump(buf, "buf_room_add_memory(): After cleaning new memory");
 
 	/* Case 3: realloc succeeded, the same pointer - we do nothing */
 	/* <Beeep> */
@@ -323,8 +357,10 @@ ret_t buf_clean_and_reset(buf_t *buf)
 
 	if (buf->data) {
 		/* Security: zero memory before it freed */
+		DDD("Cleaning before free, data %p, size %ld\n", buf->data, buf_room_take(buf));
 		memset(buf->data, 0, buf_room_take(buf));
 		free(buf->data);
+		buf->data = NULL;
 	}
 
 	memset(buf, 0, sizeof(buf_t));
@@ -357,20 +393,16 @@ ret_t buf_add(buf_t *buf /* Buf_t to add into */,
 	TESTP_ASSERT(buf, "buf is NULL");
 	TESTP_ASSERT(new_data, "new_data is NULL");
 
-	// buf_dump(buf, "Beginning of buf_add");
-
 	/* We can not add buffer of 0 bytes or less; probably , if we here it is a bug */
 	if (sz < 1) {
 		DE("Wrong argument(s): b = %p, buf = %p, size = %ld\n", buf, new_data, sz);
-		TRY_ABORT();
-		return (-EINVAL);
+		ABORT_OR_RETURN(-EINVAL);
 	}
 
 	/* Assure that we have enough room to add this buffer */
 	if (OK != buf_room_assure(buf, sz)) {
 		DE("Can't add room into buf_t\n");
-		TRY_ABORT();
-		return (-ENOMEM);
+		ABORT_OR_RETURN(-ENOMEM);
 	}
 
 	/* And now we are adding the buffer at the tail */
@@ -380,6 +412,25 @@ ret_t buf_add(buf_t *buf /* Buf_t to add into */,
 
 	BUF_TEST(buf);
 	return (OK);
+}
+
+ret_t buf_merge(buf_t *dst, buf_t *src)
+{
+	ret_t rc;
+	TESTP_ASSERT(dst, "Buf 'dst' is NULL");
+	TESTP_ASSERT(src, "Buf 'src' is NULL");
+	rc = buf_add(dst, src->data, src->used);
+
+	if (OK != rc) {
+		DE("The buf_add() failed\n");
+		ABORT_OR_RETURN(rc);
+	}
+
+	if (OK != buf_clean_and_reset(src)) {
+		DE("Could not clean 'src' buffer\n");
+		ABORT_OR_RETURN(-ECANCELED);
+	}
+	return rc;
 }
 
 /* Copy the given buffer "new_data" at tail of the buf_t */

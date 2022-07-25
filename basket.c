@@ -13,7 +13,7 @@ static void basket_free_mem(void *mem, const char *who, const int line)
 	free(mem);
 }
 
-static basket_t *basket_t_alloc(void)
+basket_t *basket_new(void)
 {
 	basket_t *basket = malloc(sizeof(basket_t));
 	if (NULL == basket) {
@@ -30,14 +30,14 @@ ret_t basket_release(basket_t *basket)
 	TESTP(basket, -1);
 
 	/* TODO: Deallocate boxes */
-	if (basket->bufs) {
+	if (basket->boxes) {
 		buf_u32_t i;
 
-		for (i = 0; i < basket->bufs_num; i++) {
-			buf_free(basket->bufs[i]);
+		for (i = 0; i < basket->boxes_used; i++) {
+			buf_free(basket->boxes[i]);
 		}
 
-		free(basket->bufs);
+		free(basket->boxes);
 		DD("Freed basket->bufs\n");
 	}
 
@@ -46,62 +46,51 @@ ret_t basket_release(basket_t *basket)
 	return 0;
 }
 
-/* Allocate new Basket object */
-/* Testing function: basket_test.c::basket_new_test() */
-basket_t *basket_new(void)
-{
-	basket_t *basket = basket_t_alloc();
-	TESTP(basket, NULL);
-
-	DD("Allocated a new basket : %p\n", basket);
-	return basket;
-}
-
 /*** Getters / Setters */
 
 /* Internal function: get pointer of a box inside of the basket */
 buf_t *basket_get_box(const basket_t *basket, buf_u32_t box_index)
 {
 	TESTP(basket, NULL);
-	TESTP(basket->bufs, NULL);
-	if (box_index > basket->bufs_num) {
+	TESTP(basket->boxes, NULL);
+	if (box_index > basket->boxes_used) {
 		DE("Asked to get a box out of range\n");
 		return NULL;
 	}
 
 	// DDD("Returning pointer to box %u (%p)\n", box_index, (bufs + box_index));
-	return (basket->bufs[box_index]);
+	return (basket->boxes[box_index]);
 }
 
-buf_t *basket_get_last_box(const basket_t *basket)
+static buf_t *basket_get_last_box(const basket_t *basket)
 {
 	TESTP(basket, NULL);
-	TESTP(basket->bufs, NULL);
-	if (0 == basket->bufs_num) {
+	TESTP(basket->boxes, NULL);
+	if (0 == basket->boxes_used) {
 		return NULL;
 	}
 
 	DDD("The boxes count is %u, last buf index is %u, num of pointers is %u, returning ptr %p\n",
-		basket->bufs_num, basket->bufs_num - 1, basket->bufs_allocated, /*bufs[number - 1]*/ basket->bufs[basket->bufs_num]);
-	return basket->bufs[basket->bufs_num - 1];
+		basket->boxes_used, basket->boxes_used - 1, basket->boxes_allocated, /*bufs[number - 1]*/ basket->boxes[basket->boxes_used]);
+	return basket->boxes[basket->boxes_used - 1];
 }
 
-buf_s64_t basket_get_last_box_index(const basket_t *basket)
+static buf_s64_t basket_get_last_box_index(const basket_t *basket)
 {
 	// return basket_get_boxes_count(basket) - 1;
-	return basket->bufs_num - 1;
+	return basket->boxes_used - 1;
 }
 
 size_t basket_size(const basket_t *basket)
 {
-	buf_u32_t i      = 0;
+	buf_u32_t i    = 0;
 	size_t    size;
 
 	TESTP(basket, 0);
 
 	size = sizeof(basket_t);
 
-	for (i = 0; i < basket->bufs_num; i++) {
+	for (i = 0; i < basket->boxes_used; i++) {
 		buf_t  *box = basket_get_box(basket, i);
 
 		/* Add size of the pointer */
@@ -117,35 +106,35 @@ ret_t basket_clean(basket_t *basket)
 	TESTP(basket, -1);
 
 	/* Validity test 1 */
-	if (NULL == basket->bufs && basket->bufs_num > 0) {
-		DE("Error: if number of boxes > 0 (%d), the boxes array must not be NULL pointer, but it is\n", basket->bufs_num);
+	if (NULL == basket->boxes && basket->boxes_used > 0) {
+		DE("Error: if number of boxes > 0 (%d), the boxes array must not be NULL pointer, but it is\n", basket->boxes_used);
 		abort();
 	}
 
 	/* Validity test 2 */
-	if (NULL != basket->bufs && basket->bufs_num == 0) {
-		DE("Error: if number of boxes == 0, the boxes array must not be NULL pointer, but it is not : %p\n", basket->bufs);
+	if (NULL != basket->boxes && basket->boxes_used == 0) {
+		DE("Error: if number of boxes == 0, the boxes array must not be NULL pointer, but it is not : %p\n", basket->boxes);
 		abort();
 	}
 
-	if (NULL == basket->bufs) {
-		DDD("Not cleaning boxes because they are not exist: bufs ptr : %p, num of boxes: %u\n", basket->bufs, basket->bufs_num);
+	if (NULL == basket->boxes) {
+		DDD("Not cleaning boxes because they are not exist: bufs ptr : %p, num of boxes: %u\n", basket->boxes, basket->boxes_used);
 		return 0;
 	}
 
-	DDD("Cleaning basket->bufs_num (%u) boxes (%p)\n", basket->bufs_num, basket->bufs);
-	for (i = 0; i < basket->bufs_num; i++) {
-		if (OK != buf_free(basket->bufs[i])) {
+	DDD("Cleaning basket->bufs_num (%u) boxes (%p)\n", basket->boxes_used, basket->boxes);
+	for (i = 0; i < basket->boxes_used; i++) {
+		if (OK != buf_free(basket->boxes[i])) {
 			DE("Could not free box\n");
 			ABORT_OR_RETURN(-1);
 		}
 	}
 
-	DDD("Free() basket->bufs_num boxes (%p)\n", basket->bufs);
+	DDD("Free() basket->bufs_num boxes (%p)\n", basket->boxes);
 
-	basket->bufs = NULL;
+	basket->boxes = NULL;
 
-	basket->bufs_num = 0;
+	basket->boxes_used = 0;
 	basket_free_mem(basket, __func__, __LINE__);
 	return 0;
 }
@@ -155,8 +144,8 @@ static ret_t basket_grow_box_pointers(basket_t *basket)
 	void *tmp;
 
 	DD("Going to call reallocarray(bufs = %p, basket->bufs_allocated + BASKET_BUFS_GROW_RATE = %u, sizeof(void *) = %zu)\n",
-	   basket->bufs, basket->bufs_allocated + BASKET_BUFS_GROW_RATE, sizeof(void *));
-	tmp = reallocarray(basket->bufs, basket->bufs_allocated + BASKET_BUFS_GROW_RATE, sizeof(void *));
+	   basket->boxes, basket->boxes_allocated + BASKET_BUFS_GROW_RATE, sizeof(void *));
+	tmp = reallocarray(basket->boxes, basket->boxes_allocated + BASKET_BUFS_GROW_RATE, sizeof(void *));
 	if (NULL == tmp) {
 		DE("Allocation failed\n");
 		ABORT_OR_RETURN(-1);
@@ -166,15 +155,15 @@ static ret_t basket_grow_box_pointers(basket_t *basket)
 	 * we allocate more than on.
 	 * To be exact, we allocate BASKET_BUFS_GROW_RATE number of pointers.
 	   This way we decrease delays when user adds new boxes */
-	basket->bufs_allocated += BASKET_BUFS_GROW_RATE;
+	basket->boxes_allocated += BASKET_BUFS_GROW_RATE;
 
-	if (tmp != basket->bufs) {
+	if (tmp != basket->boxes) {
 		/*
 		 * TODO: Free old buffer?
 		 * When it uncommented, we have a crash caused double free here
 		 */
 		// free(basket->bufs);
-		basket->bufs = tmp;
+		basket->boxes = tmp;
 	}
 	return 0;
 }
@@ -185,15 +174,15 @@ ret_t box_add_new(basket_t *basket)
 	TESTP(basket, -1);
 
 	/* If no buffers, we should allocate - call 'grow' func */
-	if (NULL == basket->bufs) {
+	if (NULL == basket->boxes) {
 		basket_grow_box_pointers(basket);
 	}
 
-	if (NULL == basket->bufs) {
+	if (NULL == basket->boxes) {
 		ABORT_OR_RETURN(-1);
 	}
 
-	if (basket->bufs_num == basket->bufs_allocated) {
+	if (basket->boxes_used == basket->boxes_allocated) {
 		if (OK != basket_grow_box_pointers(basket)) {
 			DE("Could not grow basket->bufs\n");
 			ABORT_OR_RETURN(-1);
@@ -201,9 +190,10 @@ ret_t box_add_new(basket_t *basket)
 	}
 
 	/* The 'buf_new()' allocates a new box and cleans it, no need to clean */
-	basket->bufs[basket->bufs_num] = buf_new(0);
-	basket->bufs_num++;
-	DD("Allocated a new box, set at index %u\n", basket->bufs_num - 1);
+	basket->boxes[basket->boxes_used] = buf_new(0);
+	basket->boxes_used++;
+	DDD("Allocated a new box, set at index %u\n", basket->boxes_used - 1);
+	buf_dump(basket->boxes[basket->boxes_used - 1], "box_add_new(): added a new box, must be all 0/NULL");
 	return 0;
 }
 
@@ -216,31 +206,31 @@ ret_t box_insert_after(basket_t *basket, const uint32_t after_index)
 	void      *move_start_p           = NULL;
 	void      *move_end_p             = NULL;
 	TESTP(basket, -1);
-	TESTP(basket->bufs, -1);
+	TESTP(basket->boxes, -1);
 
 	/* Test that we have enough allocated slots in basket->bufs to move all by 1 position */
-	if ((basket->bufs_num + 1) > basket->bufs_allocated) {
+	if ((basket->boxes_used + 1) > basket->boxes_allocated) {
 		if (0 != basket_grow_box_pointers(basket)) {
 			ABORT_OR_RETURN(-1);
 		}
 	}
 
 	/* Move memory */
-	how_many_bytes_to_move = (basket->bufs_num - after_index) * sizeof(void *);
+	how_many_bytes_to_move = (basket->boxes_used - after_index) * sizeof(void *);
 	move_start_offset_bytes = (after_index + 1) * sizeof(void *);
 
 	/* We start here ... */
-	move_start_p = basket->bufs + move_start_offset_bytes;
+	move_start_p = basket->boxes + move_start_offset_bytes;
 	/*... and move to free one void * pointer, where we want to insert a new box */
-	move_end_p = basket->bufs + move_start_offset_bytes + sizeof(void *);
+	move_end_p = basket->boxes + move_start_offset_bytes + sizeof(void *);
 
 	memmove(/* Dst */move_end_p, /* Src */ move_start_p, /* Size */ how_many_bytes_to_move);
 
 	/* Insert a new box*/
-	basket->bufs[after_index + 1] = buf_new(0);
+	basket->boxes[after_index + 1] = buf_new(0);
 
 	/* Increase boxes count */
-	basket->bufs_num++;
+	basket->boxes_used++;
 
 	/* We are done */
 	return 0;
@@ -251,15 +241,15 @@ ret_t box_swap(basket_t *basket, const buf_u32_t first, const buf_u32_t second)
 	buf_t     *tmp;
 	TESTP(basket, -1);
 
-	if (first > basket->bufs_num || second > basket->bufs_num) {
+	if (first > basket->boxes_used || second > basket->boxes_used) {
 		DE("One of asked boxes is out of range, first = %u, second = %u, number of boxes is %u\n",
-		   first, second, basket->bufs_num);
+		   first, second, basket->boxes_used);
 		ABORT_OR_RETURN(-1);
 	}
 
-	tmp = basket->bufs[first];
-	basket->bufs[first] = basket->bufs[second];
-	basket->bufs[second] = tmp;
+	tmp = basket->boxes[first];
+	basket->boxes[first] = basket->boxes[second];
+	basket->boxes[second] = tmp;
 	return 0;
 }
 
@@ -267,9 +257,9 @@ ret_t box_remove(basket_t *basket, const buf_u32_t num)
 {
 	buf_t *box;
 	TESTP(basket, -1);
-	if (num > basket->bufs_num) {
+	if (num > basket->boxes_used) {
 		DE("Asked to remove a box (%u) out of range (%u)\n",
-		   num, basket->bufs_num);
+		   num, basket->boxes_used);
 		ABORT_OR_RETURN(-1);
 	}
 
@@ -282,20 +272,20 @@ ret_t box_remove(basket_t *basket, const buf_u32_t num)
 		ABORT_OR_RETURN(-1);
 	}
 
-	/* TOOD: If this box is the last box, run ra=ealloc and remove unused memory */
+	/* TOOD: If this box is the last box, run raalloc and remove unused memory */
 
 	return 0;
 }
 
 ret_t box_merge(basket_t *basket, const buf_u32_t src, const buf_u32_t dst)
 {
-	buf_t     *box_src;
-	buf_t     *box_dst;
-	ret_t     rc;
+	buf_t *box_src;
+	buf_t *box_dst;
+	ret_t rc;
 	TESTP(basket, -1);
 
-	if (src > basket->bufs_num || dst > basket->bufs_num) {
-		DE("Src (%u) or dst (%u) box is out of range (%u)\n", src, dst, basket->bufs_num);
+	if (src > basket->boxes_used || dst > basket->boxes_used) {
+		DE("Src (%u) or dst (%u) box is out of range (%u)\n", src, dst, basket->boxes_used);
 		ABORT_OR_RETURN(-1);
 	}
 
@@ -335,9 +325,33 @@ ret_t box_bisect(__attribute__((unused)) basket_t *basket,
 	/* TODO */
 }
 
-ret_t basket_collapse_in_place(__attribute__((unused)) basket_t *basket)
+ret_t basket_collapse_in_place(basket_t *basket)
 {
-	return -1;
+	buf_u32_t i;
+	TESTP(basket, -1);
+	TESTP(basket->boxes, -1);
+
+	// basket_dump(basket, "Going to collapse in place");
+
+	/* We need two or more boxes to run this function */
+	if (basket->boxes_used < 2) {
+		return 0;
+	}
+
+	for (i = 1; i < basket->boxes_used; i++) {
+		if (NULL == basket->boxes[i]) {
+			DD("Do not merge box[%u] of %u, because it is NULL pointer\n", i, basket->boxes_used);
+			continue;
+		}
+
+		DD("BOX[%u]\n", i);
+		//buf_dump(basket->boxes[i], "Merging buf[X] into buf[0]");
+		if (OK != buf_merge(basket->boxes[0], basket->boxes[i])) {
+			ABORT_OR_RETURN(-1);
+		}
+	}
+
+	return 0;
 	/* TODO */
 }
 
@@ -361,10 +375,10 @@ void *basket_to_buf(const basket_t *basket, size_t *size)
 	buf_size = sizeof(basket_send_header_t);
 
 	/* And we need the struct box_dump_t per box */
-	buf_size += sizeof(box_dump_t) * basket->bufs_num;
+	buf_size += sizeof(box_dump_t) * basket->boxes_used;
 
 	/* We need to dump the content of every box, so count common of buffer in all boxes */
-	for (i = 0; i < basket->bufs_num; i++) {
+	for (i = 0; i < basket->boxes_used; i++) {
 		buf_t *box = basket_get_box(basket, i);
 		buf_size += buf_used_take(box);
 	}
@@ -379,7 +393,7 @@ void *basket_to_buf(const basket_t *basket, size_t *size)
 
 	/* First, fill the header */
 	basket_buf_header.total_len = buf_size;
-	basket_buf_header.boxes_num = basket->bufs_num;
+	basket_buf_header.boxes_num = basket->boxes_used;
 
 	/* Watermark: a predefined pattern. */
 	basket_buf_header.watermark = WATERMARK_BASKET;
@@ -392,7 +406,7 @@ void *basket_to_buf(const basket_t *basket, size_t *size)
 
 	/* Now we run on array of boxes, and add one by one to the buffer */
 
-	for (i = 0; i < basket->bufs_num; i++) {
+	for (i = 0; i < basket->boxes_used; i++) {
 		buf_t  *box     = basket_get_box(basket, i);
 
 		/* Fill the header, for every box we create and fill the header */
@@ -506,16 +520,18 @@ ssize_t box_new_from_data(basket_t *basket, const void *buffer, const buf_u32_t 
 	}
 
 	/* We allocated an additional box. Thus, number of boxes MUST be > 0 */
-	if (0 == basket->bufs_num) {
+	if (0 == basket->boxes_used) {
 		DE("The number of boxes must not be 0 here, but it is\n");
 		ABORT_OR_RETURN(-1);
 	}
 
 	box = basket_get_last_box(basket);
 
+	buf_dump(box, "box_new_from_data(): got the last box from basket");
+
 	if (NULL == box) {
 		DE("Could not get pointer to the last box, number of boxes (%u) - stop\n",
-		   basket->bufs_num);
+		   basket->boxes_used);
 		ABORT_OR_RETURN(-1);
 	}
 
@@ -524,6 +540,8 @@ ssize_t box_new_from_data(basket_t *basket, const void *buffer, const buf_u32_t 
 		DE("Could not add data into the last (new) box: new data size %u\n", buffer_size);
 		ABORT_OR_RETURN(-1);
 	}
+
+	buf_dump(box, "box_new_from_data(): Added new data");
 
 	/* Return the number of the new box */
 	return basket_get_last_box_index(basket);
@@ -536,8 +554,8 @@ ret_t box_add_to_tail(basket_t *basket, const buf_u32_t box_num, const void *buf
 	TESTP(basket, -1);
 	TESTP(buffer, -1);
 
-	if (box_num > basket->bufs_num) {
-		DE("Asked box is out of range: asked box %u, number of boxes is %u\n", box_num, basket->bufs_num);
+	if (box_num > basket->boxes_used) {
+		DE("Asked box is out of range: asked box %u, number of boxes is %u\n", box_num, basket->boxes_used);
 		ABORT_OR_RETURN(-1);
 	}
 
@@ -573,10 +591,10 @@ void *box_data_ptr(const basket_t *basket, const buf_u32_t box_num)
 {
 	buf_t     *box;
 	TESTP(basket, NULL);
-	TESTP(basket->bufs, NULL);
+	TESTP(basket->boxes, NULL);
 
-	if (box_num > basket->bufs_num) {
-		DE("Asked box (%u) is out of range (%d)\n", box_num, basket->bufs_num);
+	if (box_num > basket->boxes_used) {
+		DE("Asked box (%u) is out of range (%d)\n", box_num, basket->boxes_used);
 		ABORT_OR_RETURN(NULL);
 	}
 
@@ -596,8 +614,8 @@ ssize_t box_data_size(const basket_t *basket, const buf_u32_t box_num)
 	buf_t     *box;
 	TESTP(basket, -1);
 
-	if (box_num > basket->bufs_num) {
-		DE("Asked box (%u) is out of range (%d)\n", box_num, basket->bufs_num);
+	if (box_num > basket->boxes_used) {
+		DE("Asked box (%u) is out of range (%d)\n", box_num, basket->boxes_used);
 		ABORT_OR_RETURN(-1);
 	}
 	box = basket_get_box(basket, box_num);
@@ -655,22 +673,23 @@ void basket_dump(basket_t *basket, const char *msg)
 	DD("~~~~~~~~~~~~~~~~~~~~~~~~~\n");
 	DD("%s\n", msg);
 	DD("Basket ptr:            %p\n", basket);
-	DD("Basket number of bufs: %u\n", basket->bufs_num);
-	DD("Basket bufs[] ptr    : %p\n", basket->bufs);
+	DD("Basket number of bufs: %u\n", basket->boxes_used);
+	DD("Basket bufs[] ptr    : %p\n", basket->boxes);
 
-	if (basket->bufs_num > 0) {
-		buf_s64_t i;
+	if (basket->boxes_used > 0) {
+		buf_u32_t i;
 
-		for (i = 0; i < basket->bufs_num; i++) {
+		for (i = 0; i < basket->boxes_used; i++) {
 			buf_t *box = basket_get_box(basket, i);
 
-			DD(">>> Basket buf number:     %ld\n", i);
-			DD(">>> Basket buf ptr:        %p\n", box);
+			DD("`````````````````````````\n");
+
+			DD(">>> Box[%u] ptr:        %p\n", i, box);
 			if (NULL == box) continue;
 
-			DD(">>> Basket buf used:       %ld\n", buf_used_take(box));
-			DD(">>> Basket buf room:       %ld\n", buf_room_take(box));
-			DD(">>> Basket buf data ptr:   %p\n", buf_data_take(box));
+			DD(">>> Box[%u] used:       %ld\n", i, buf_used_take(box));
+			DD(">>> Box[%u] room:       %ld\n", i, buf_room_take(box));
+			DD(">>> Box[%u] data ptr:   %p\n", i, buf_data_take(box));
 
 		}
 	}
