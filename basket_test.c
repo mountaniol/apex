@@ -9,55 +9,26 @@
 const char *lorem_ipsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\0";
 
 /* Allocate a basket with asked number of boxes */
-static basket_t *basket_new_and_several_boxes(uint32_t num)
+static basket_t *basket_new_test(void)
 {
 	uint32_t i;
 	basket_t *basket = basket_new();
 
 	/* Check that mbox is allocated */
 	if (NULL == basket) {
-		DE("Failed allocate mbox with %u boxes, got NULL pointer\n", num);
+		DE("Failed allocate basket\n");
 		abort();
 	}
 
-	/* Check that asked number of boxes are allocated */
-	if (num != basket->boxes_used) {
-		DE("[TEST] Allocated mbox, but wrong num of boxes: asked %u, allocated %u\n",
-		   num, basket->boxes_used);
+	/* Check that thre are 0 boxes are allocated */
+	if (0 != basket->boxes_used) {
+		DE("[TEST] Allocated basket, but wrong num of boxes: must be 0, allocated %u\n", basket->boxes_used);
 		abort();
 	}
 
 	/* Check that there are real boxes */
-	for (i = 0; i < num; i++) {
-		buf_t  *box = basket_get_box(basket, i);
-		if (NULL == box) {
-			DD("[TEST] Box %u of %u is a NULL pointer\n", i, num);
-			continue;
-		}
-
-		/* Tests that the box is properly allocated: it is buf_t, test that all fields are 0 */
-		if (buf_used_take(box) || buf_room_take(box) || buf_data_take(box)) {
-			DE("[TEST] Box %u is not properly inited, all must be 0/NULL: mb->bufs[i]->used = %ld, mb->bufs[i]->room = %ld, mb->bufs[i]->data = %p\n",
-			   i, buf_used_take(box), buf_room_take(box), buf_data_take(box));
-		}
-	}
-
-	return basket;
-}
-
-/* Test basket_new() function */
-static int basket_new_test(void)
-{
-	basket_t *basket         = NULL;
-	uint32_t boxes_in_test[] = {0, 1, 10, 100, 1024};
-	uint32_t number_of_tests = sizeof(boxes_in_test) / sizeof(uint32_t);
-	uint32_t i;
-
-	for (i = 0; i < number_of_tests; i++) {
-		/* 1. Allocate an empty mbox */
-		basket = basket_new_and_several_boxes(boxes_in_test[i]);
-		DD("[TEST] Success: allocated mbox with %u boxes\n", boxes_in_test[i]);
-		basket_release(basket);
+	if (0 != basket_release(basket)) {
+		DE("[TEST] Can not release basket\n");
 	}
 	return 0;
 }
@@ -306,9 +277,9 @@ void basket_collapse_in_place_test(void)
 
 int main(void)
 {
-	// basket_new_test();
-	//box_new_from_data_simple_test();
-	//box_new_from_data_test();
+	basket_new_test();
+	box_new_from_data_simple_test();
+	box_new_from_data_test();
 	basket_collapse_in_place_test();
 }
 

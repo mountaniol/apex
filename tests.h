@@ -24,9 +24,12 @@
 #endif /* ABORT_ON_ERROR */
 
 #define ABORT_OR_RETURN(x) do{TRY_ABORT(); return x;} while(0)
+#define ABORT_OR_RETURN_VOID() do{TRY_ABORT(); return;} while(0)
 
 /* This macro prints message and abort execution */
 #define MES_ABORT(x) do { DDE("Abort: %s\n", #x); abort(); } while(0)
+#define TESTP_ABORT(x) do { if(NULL == x) {DDE("Abort on illegal NULL: %s\n", #x); abort(); }} while(0)
+								  
 
 #define TESTP_MES(x, ret, mes) do {if(NULL == x) { DE("%s\n", mes); return ret; } } while(0)
 #define TESTP_VOID_MES(x, mes) do {if(NULL == x) { DE("%s\n", mes); return; } } while(0)

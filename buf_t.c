@@ -49,6 +49,13 @@
 
 void buf_dump(const buf_t *buf, const char *mes)
 {
+	TESTP_ABORT(buf);
+	TESTP_ABORT(mes);
+
+	if (NULL == mes) {
+		MES_ABORT("Got mes == NULL");
+	}
+
 	DD("Buf_t dump:           %s\n", mes);
 	DD("========================\n");
 	DD("Buf_t ptr:            %p\n", buf);
@@ -66,25 +73,25 @@ void buf_dump(const buf_t *buf, const char *mes)
 
 buf_s64_t buf_used_take(const buf_t *buf)
 {
-	T_RET_ABORT(buf, -EINVAL);
+	TESTP_ABORT(buf);
 	return (buf->used);
 }
 
 void buf_used_set(buf_t *buf, buf_s64_t used)
 {
-	T_RET_ABORT(buf, -EINVAL);
+	TESTP_ABORT(buf);
 	buf->used = used;
 }
 
 void buf_used_inc(buf_t *buf, buf_s64_t inc)
 {
+	TESTP_ABORT(buf);
 	buf->used += inc;
 }
 
 void buf_used_dec(buf_t *buf, buf_s64_t dec)
 {
-	T_RET_ABORT(buf, -EINVAL);
-
+	TESTP_ABORT(buf);
 	if (dec > buf_used_take(buf)) {
 		DE("Tried to decrement 'buf->used' such that it will be < 0: current %zu, asked decrement %zu\n",
 		   buf->room, dec);
@@ -104,7 +111,7 @@ void buf_used_dec(buf_t *buf, buf_s64_t dec)
 /* Validate sanity of buf_t - common for all buffers */
 ret_t buf_is_valid(const buf_t *buf, const char *who, const int line)
 {
-	T_RET_ABORT(buf, -EINVAL);
+	TESTP_ABORT(buf);
 
 	/* buf->used always <= buf->room */
 	/* TODO: not in case of CIRC buffer */
@@ -177,8 +184,8 @@ buf_t *buf_new(buf_s64_t size)
 
 ret_t buf_data_set(buf_t *buf, char *data, const buf_s64_t size, const buf_s64_t len)
 {
-	T_RET_ABORT(buf, -EINVAL);
-	T_RET_ABORT(data, -EINVAL);
+	TESTP_ABORT(buf);
+	TESTP_ABORT(data);
 
 	buf->data = data;
 	buf_room_set(buf, size);
@@ -189,7 +196,7 @@ ret_t buf_data_set(buf_t *buf, char *data, const buf_s64_t size, const buf_s64_t
 void *buf_data_steal(buf_t *buf)
 {
 	void *data;
-	T_RET_ABORT(buf, NULL);
+	TESTP_ABORT(buf);
 	data = buf->data;
 	buf->data = NULL;
 	buf_room_set(buf, 0);
@@ -200,7 +207,7 @@ void *buf_data_steal(buf_t *buf)
 void *buf_data_steal_and_release(buf_t *buf)
 {
 	void *data;
-	T_RET_ABORT(buf, NULL);
+	TESTP_ABORT(buf);
 	data = buf_data_steal(buf);
 	if (OK != buf_free(buf)) {
 		DE("Warning! Memory leak: can't clean buf_t!");
@@ -211,13 +218,13 @@ void *buf_data_steal_and_release(buf_t *buf)
 
 void *buf_data_take(const buf_t *buf)
 {
-	T_RET_ABORT(buf, NULL);
+	TESTP_ABORT(buf);
 	return (buf->data);
 }
 
 ret_t buf_is_data_null(buf_t *buf)
 {
-	T_RET_ABORT(buf, -EINVAL);
+	TESTP_ABORT(buf);
 	if (NULL == buf->data) {
 		return YES;
 	}
@@ -227,9 +234,14 @@ ret_t buf_is_data_null(buf_t *buf)
 /* This is an internal function. Here we realloc the internal buf_t buffer */
 static ret_t buf_realloc(buf_t *buf, size_t new_size)
 {
-	size_t room          = (size_t)buf->room;
-	size_t size_to_copy  = MIN(room, new_size);
-	void   *tmp;
+	size_t room         = 0;
+	size_t size_to_copy = 0;
+	void   *tmp         = NULL;
+
+	TESTP_ABORT(buf);
+
+	room         = (size_t)buf->room;
+	size_to_copy = MIN(room, new_size);
 
 	// buf_dump(buf, "in Buf Realloc, before");
 
@@ -256,7 +268,9 @@ static ret_t buf_realloc(buf_t *buf, size_t new_size)
 /* This is an internal function. Here we realloc the internal buf_t buffer */
 static ret_t buf_realloc_old(buf_t *buf, size_t new_size)
 {
-	void   *tmp = realloc(buf->data, new_size);
+	void   *tmp;
+	TESTP_ABORT(buf);
+	tmp = realloc(buf->data, new_size);
 
 	/* Case 1: realloc can't reallocate */
 	if (NULL == tmp) {
@@ -278,7 +292,7 @@ static ret_t buf_realloc_old(buf_t *buf, size_t new_size)
 ret_t buf_room_add_memory(buf_t *buf, buf_s64_t sz)
 {
 	size_t original_room_size;
-	T_RET_ABORT(buf, -EINVAL);
+	TESTP_ABORT(buf);
 
 	buf_dump(buf, "buf_room_add_memory(): Before adding memory");
 	if (0 == sz) {
@@ -315,11 +329,17 @@ ret_t buf_room_add_memory(buf_t *buf, buf_s64_t sz)
 /* Return how much bytes is available in the buf_t */
 buf_s64_t buf_room_avaialable_take(buf_t *buf)
 {
-	buf_s64_t m_used;
-	buf_s64_t m_room;
-	T_RET_ABORT(buf, -EINVAL);
+	buf_s64_t m_used = -1;
+	buf_s64_t m_room = -1;
+	TESTP_ABORT(buf);
 	m_used = buf_used_take(buf);
+	if (m_used < 0) {
+		MES_ABORT("buf_used_take(buf) returned a value < 0");
+	}
 	m_room = buf_room_take(buf);
+	if (m_room < 0) {
+		MES_ABORT("buf_room_take(buf) returned a value < 0");
+	}
 
 	if (m_room < m_used) {
 		DE("A bug: buf->room (%ld) can not be < buf->used (%ld) ; probably memory coruption or misuse\n",
@@ -330,11 +350,11 @@ buf_s64_t buf_room_avaialable_take(buf_t *buf)
 
 ret_t buf_room_assure(buf_t *buf, buf_s64_t expect)
 {
-	T_RET_ABORT(buf, -EINVAL);
+	TESTP_ABORT(buf);
 
 	/* It is meanless to pass expected == 0 */
-	if (0 == expect) {
-		DE("'expected' size == 0\n");
+	if (expect < 1) {
+		DE("'expected' size <= 0 : %ld\n", expect);
 		TRY_ABORT();
 		return (-EINVAL);
 	}
@@ -349,7 +369,7 @@ ret_t buf_room_assure(buf_t *buf, buf_s64_t expect)
 
 ret_t buf_clean_and_reset(buf_t *buf)
 {
-	T_RET_ABORT(buf, -EINVAL);
+	TESTP_ABORT(buf);
 
 	if (OK != buf_is_valid(buf, __func__, __LINE__)) {
 		DE("Warning: buffer is invalid\n");
@@ -369,7 +389,7 @@ ret_t buf_clean_and_reset(buf_t *buf)
 
 ret_t buf_free(buf_t *buf)
 {
-	T_RET_ABORT(buf, -EINVAL);
+	TESTP_ABORT(buf);
 
 	/* Just in case, test that the buf_t is valid */
 	if (OK != buf_is_valid(buf, __func__, __LINE__)) {
@@ -390,8 +410,8 @@ ret_t buf_add(buf_t *buf /* Buf_t to add into */,
 			  const char *new_data /* Buffer to add */,
 			  const buf_s64_t sz /* Size of the buffer to add */)
 {
-	TESTP_ASSERT(buf, "buf is NULL");
-	TESTP_ASSERT(new_data, "new_data is NULL");
+	TESTP_ABORT(buf);
+	TESTP_ABORT(new_data);
 
 	/* We can not add buffer of 0 bytes or less; probably , if we here it is a bug */
 	if (sz < 1) {
@@ -417,8 +437,8 @@ ret_t buf_add(buf_t *buf /* Buf_t to add into */,
 ret_t buf_merge(buf_t *dst, buf_t *src)
 {
 	ret_t rc;
-	TESTP_ASSERT(dst, "Buf 'dst' is NULL");
-	TESTP_ASSERT(src, "Buf 'src' is NULL");
+	TESTP_ABORT(dst);
+	TESTP_ABORT(src);
 	rc = buf_add(dst, src->data, src->used);
 
 	if (OK != rc) {
@@ -443,8 +463,8 @@ ret_t buf_replace(buf_t *buf /* Buf_t to replace data in */,
 	/* NOTE: This function is not dedicated to reset the buf_t:
 	 * It means, this function does not accept new_data == NULL + size == 0.
 	   If one needs to reset the buf_t, there is a dedicated funtion for this task */
-	TESTP_ASSERT(buf, "buf is NULL");
-	TESTP_ASSERT(new_data, "new_data is NULL");
+	TESTP_ABORT(buf);
+	TESTP_ABORT(new_data);
 
 	/* We can not add buffer of 0 bytes or less; probably , if we here it is a bug */
 	if (size < 1) {
@@ -476,33 +496,33 @@ ret_t buf_replace(buf_t *buf /* Buf_t to replace data in */,
 
 buf_s64_t buf_room_take(const buf_t *buf)
 {
-	T_RET_ABORT(buf, -EINVAL);
+	TESTP_ABORT(buf);
 	return (buf->room);
 }
 
 void buf_room_set(buf_t *buf, buf_s64_t room)
 {
-	TESTP_ASSERT(buf, "buf is NULL");
-	DD("Setting buffer room: %ld\n", room);
+	TESTP_ABORT(buf);
+	DDD("Setting buffer room: %ld\n", room);
 	buf->room = room;
 }
 
 void buf_room_inc(buf_t *buf, buf_s64_t inc)
 {
-	TESTP_ASSERT(buf, "buf is NULL");
-	DD("Inc buffer room: %ld + %ld\n", buf->room, inc);
+	TESTP_ABORT(buf);
+	DDD("Inc buffer room: %ld + %ld\n", buf->room, inc);
 	buf->room += inc;
 }
 
 void buf_room_dec(buf_t *buf, buf_s64_t dec)
 {
-	TESTP_ASSERT(buf, "buf is NULL");
+	TESTP_ABORT(buf);
 	if (dec > buf_room_take(buf)) {
 		DE("Asked to decrement buf->room to a negative value");
 		TRY_ABORT();
 	}
 
-	DD("Dec buffer room: %ld - %ld\n", buf->room, dec);
+	DDD("Dec buffer room: %ld - %ld\n", buf->room, dec);
 
 	if (buf->room >= dec) {
 		buf->room -= dec;
@@ -513,7 +533,7 @@ void buf_room_dec(buf_t *buf, buf_s64_t dec)
 
 ret_t buf_pack(buf_t *buf)
 {
-	T_RET_ABORT(buf, -EINVAL);
+	TESTP_ABORT(buf);
 
 	/*** If buffer is empty we have nothing to do */
 
