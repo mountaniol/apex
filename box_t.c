@@ -7,10 +7,10 @@
 #include <stddef.h>
 #include <linux/errno.h>
 
-#include "buf_t.h"
+#include "box_t.h"
 
-#include "buf_t_debug.h"
-#include "buf_t_memory.h"
+#include "box_t_debug.h"
+#include "box_t_memory.h"
 #include "tests.h"
 
 /* Syntax Note:
@@ -18,7 +18,7 @@
  * *** General ***
  *
  * A function name composed of:
- * 1. Module name: "buft", "mbuf" or something else.
+ * 1. Module name: "box", "basket" or something else.
  * 2. Field name (if related to a specific field): " "_used", "_room"
  * 3. Action name (if applicable): "_set", "_take" etc.
  *
@@ -31,16 +31,16 @@
  * "_dec" - decrease existing value by new value.
  *
  * To avoud any misunderstanding, here are examples.
- * Let say, the "buf->used" value is 7 in the beginning of each examples below:
+ * Let say, the "box->used" value is 7 in the beginning of each examples below:
  *
- * 1. buf_used_take(buf) will return 7
- * 2. buf_used_set(buf, 12) - after this the "buf->used" == 12
- * 3. buf_used_inc(buf, 2) - after this the "buf->used" == 9
- * 4. buf_used_dec(buf, 2) - after this the "buf->used" == 5
+ * 1. box_used_take(box) will return 7
+ * 2. box_used_set(box, 12) - after this the "box->used" == 12
+ * 3. box_used_inc(box, 2) - after this the "box->used" == 9
+ * 4. box_used_dec(box, 2) - after this the "box->used" == 5
  *
  * Of course, one could misuse it. For example:
- * 1. buf_used_inc(buf, -2) - after this the "buf->used" == 5
- * 2. buf_used_dec(buf, -3) - after this the "buf->used" == 10
+ * 1. box_used_inc(box, -2) - after this the "box->used" == 5
+ * 2. box_used_dec(box, -3) - after this the "box->used" == 10
  *
  * These two examples will work, they are mathematically correct,
  * however it make the code undestanding harder.
@@ -48,9 +48,9 @@
  */
 
 #ifdef ENABLE_BUF_DUMP
-void buf_dump(const box_t *buf, const char *mes)
+void box_dump(const box_t *box, const char *mes)
 {
-	TESTP_ABORT(buf);
+	TESTP_ABORT(box);
 	TESTP_ABORT(mes);
 
 	if (NULL == mes) {
@@ -59,47 +59,47 @@ void buf_dump(const box_t *buf, const char *mes)
 
 	DD("Buf_t dump:           %s\n", mes);
 	DD("========================\n");
-	DD("Buf_t ptr:            %p\n", buf);
-	if (NULL == buf) {
+	DD("Buf_t ptr:            %p\n", box);
+	if (NULL == box) {
 		return;
 	}
 
-	DD("Buf_t data ptr:       %p\n", buf_data_take(buf));
-	DD("Buf_t used:           %ld\n", buf_used_take(buf));
-	DD("Buf_t room:           %ld\n", buf_room_take(buf));
+	DD("Buf_t data ptr:       %p\n", box_data_take(box));
+	DD("Buf_t used:           %ld\n", box_used_take(box));
+	DD("Buf_t room:           %ld\n", box_room_take(box));
 	DD("========================\n");
 }
 #else
-void buf_dump(__attribute__((unused)) const box_t *buf, __attribute__((unused)) const char *mes)
+void box_dump(__attribute__((unused)) const box_t *buf, __attribute__((unused)) const char *mes)
 {
 }
 #endif /* BUF_DUMP */
 
 /*** Get and Set value of 'used' field in the buf_t ***/
 
-box_s64_t buf_used_take(const box_t *buf)
+box_s64_t box_used_take(const box_t *buf)
 {
 	TESTP_ABORT(buf);
 	return (buf->used);
 }
 
-void buf_used_set(box_t *buf, box_s64_t used)
+void box_used_set(box_t *buf, box_s64_t used)
 {
 	TESTP_ABORT(buf);
 	buf->used = used;
 }
 
-void buf_used_inc(box_t *buf, box_s64_t inc)
+void box_used_inc(box_t *buf, box_s64_t inc)
 {
 	TESTP_ABORT(buf);
 	buf->used += inc;
 }
 
-void buf_used_dec(box_t *buf, box_s64_t dec)
+void box_used_dec(box_t *buf, box_s64_t dec)
 {
 	TESTP_ABORT(buf);
-	if (dec > buf_used_take(buf)) {
-		DE("Tried to decrement 'buf->used' such that it will be < 0: current %zu, asked decrement %zu\n",
+	if (dec > box_used_take(buf)) {
+		DE("Tried to decrement 'box->used' such that it will be < 0: current %zu, asked decrement %zu\n",
 		   buf->room, dec);
 		TRY_ABORT();
 	}
@@ -107,7 +107,7 @@ void buf_used_dec(box_t *buf, box_s64_t dec)
 	if (buf->used >= dec) {
 		buf->used -= dec;
 	} else {
-		DE("Tried to decrement 'buf->used' such that it will be < 0: current %zu, asked decrement %zu\n",
+		DE("Tried to decrement 'box->used' such that it will be < 0: current %zu, asked decrement %zu\n",
 		   buf->room, dec);
 		TRY_ABORT();
 		buf->used = 0;
@@ -115,34 +115,34 @@ void buf_used_dec(box_t *buf, box_s64_t dec)
 }
 
 /* Validate sanity of buf_t - common for all buffers */
-ret_t buf_is_valid(const box_t *buf, const char *who, const int line)
+ret_t box_is_valid(const box_t *buf, const char *who, const int line)
 {
 	TESTP_ABORT(buf);
 
 	/* buf->used always <= buf->room */
 	/* TODO: not in case of CIRC buffer */
-	if (buf_used_take(buf) > buf_room_take(buf)) {
+	if (box_used_take(buf) > box_room_take(buf)) {
 		DE("/%s +%d/ : Invalid buf: buf->used (%ld) > buf->room (%ld)\n",
-		   who, line, buf_used_take(buf), buf_room_take(buf));
-		buf_dump(buf, "from buf_is_valid(), before terminating 1");
+		   who, line, box_used_take(buf), box_room_take(buf));
+		box_dump(buf, "from buf_is_valid(), before terminating 1");
 		TRY_ABORT();
 		return (-ECANCELED);
 	}
 
 	/* The buf->data may be NULL if and only if both buf->used and buf->room == 0; However, we don't
 	   check buf->used: we tested that it <= buf->room already */
-	if ((NULL == buf->data) && (buf_room_take(buf) > 0)) {
+	if ((NULL == buf->data) && (box_room_take(buf) > 0)) {
 		DE("/%s +%d/ : Invalid buf: buf->data == NULL but buf->room > 0 (%ld) / buf->used (%ld)\n",
-		   who, line, buf_room_take(buf), buf_used_take(buf));
-		buf_dump(buf, "from buf_is_valid(), before terminating 2");
+		   who, line, box_room_take(buf), box_used_take(buf));
+		box_dump(buf, "from buf_is_valid(), before terminating 2");
 		TRY_ABORT();
 		return (-ECANCELED);
 	}
 
 	/* And vice versa: if buf->data != NULL the buf->room must be > 0 */
-	if ((NULL != buf->data) && (0 == buf_room_take(buf))) {
+	if ((NULL != buf->data) && (0 == box_room_take(buf))) {
 		DE("/%s +%d/: Invalid buf: buf->data != NULL but buf->room == 0\n", who, line);
-		buf_dump(buf, "from buf_is_valid(), before terminating 3");
+		box_dump(buf, "from buf_is_valid(), before terminating 3");
 		TRY_ABORT();
 		return (-ECANCELED);
 	}
@@ -151,7 +151,7 @@ ret_t buf_is_valid(const box_t *buf, const char *who, const int line)
 	return (OK);
 }
 
-box_t *buf_new(box_s64_t size)
+box_t *box_new(box_s64_t size)
 {
 	box_t  *buf;
 
@@ -170,15 +170,15 @@ box_t *buf_new(box_s64_t size)
 	}
 
 	/* Assigned value to buf->room field */
-	buf_room_set(buf, size);
+	box_room_set(buf, size);
 
 	/* Assigned value to buf->used field */
-	buf_used_set(buf, 0);
+	box_used_set(buf, 0);
 
 	/* Just in case, check that the buf_t looks valid */
-	if (OK != buf_is_valid(buf, __func__, __LINE__)) {
+	if (OK != box_is_valid(buf, __func__, __LINE__)) {
 		DE("Buffer is invalid right after allocation!\n");
-		if (OK != buf_free(buf)) {
+		if (OK != box_free(buf)) {
 			DE("Can not free the buffer\n");
 		}
 		TRY_ABORT();
@@ -188,47 +188,47 @@ box_t *buf_new(box_s64_t size)
 	return (buf);
 }
 
-ret_t buf_data_set(box_t *buf, char *data, const box_s64_t size, const box_s64_t len)
+ret_t box_data_set(box_t *buf, char *data, const box_s64_t size, const box_s64_t len)
 {
 	TESTP_ABORT(buf);
 	TESTP_ABORT(data);
 
 	buf->data = data;
-	buf_room_set(buf, size);
-	buf_used_set(buf, len);
+	box_room_set(buf, size);
+	box_used_set(buf, len);
 	return (OK);
 }
 
-void *buf_data_steal(box_t *buf)
+void *box_data_steal(box_t *buf)
 {
 	void *data;
 	TESTP_ABORT(buf);
 	data = buf->data;
 	buf->data = NULL;
-	buf_room_set(buf, 0);
-	buf_used_set(buf, 0);
+	box_room_set(buf, 0);
+	box_used_set(buf, 0);
 	return (data);
 }
 
-void *buf_data_steal_and_release(box_t *buf)
+void *box_data_steal_and_release(box_t *buf)
 {
 	void *data;
 	TESTP_ABORT(buf);
-	data = buf_data_steal(buf);
-	if (OK != buf_free(buf)) {
+	data = box_data_steal(buf);
+	if (OK != box_free(buf)) {
 		DE("Warning! Memory leak: can't clean buf_t!");
 		TRY_ABORT();
 	}
 	return (data);
 }
 
-void *buf_data_take(const box_t *buf)
+void *box_data_take(const box_t *buf)
 {
 	TESTP_ABORT(buf);
 	return (buf->data);
 }
 
-ret_t buf_is_data_null(box_t *buf)
+ret_t box_is_data_null(box_t *buf)
 {
 	TESTP_ABORT(buf);
 	if (NULL == buf->data) {
@@ -238,7 +238,7 @@ ret_t buf_is_data_null(box_t *buf)
 }
 
 /* This is an internal function. Here we realloc the internal buf_t buffer */
-static ret_t buf_realloc(box_t *buf, size_t new_size)
+static ret_t box_realloc(box_t *buf, size_t new_size)
 {
 	size_t room         = 0;
 	size_t size_to_copy = 0;
@@ -272,7 +272,7 @@ static ret_t buf_realloc(box_t *buf, size_t new_size)
 }
 
 /* This is an internal function. Here we realloc the internal buf_t buffer */
-static ret_t buf_realloc_old(box_t *buf, size_t new_size)
+static ret_t box_realloc_old(box_t *buf, size_t new_size)
 {
 	void   *tmp;
 	TESTP_ABORT(buf);
@@ -295,37 +295,37 @@ static ret_t buf_realloc_old(box_t *buf, size_t new_size)
 	return OK;
 }
 
-ret_t buf_room_add_memory(box_t *buf, box_s64_t sz)
+ret_t box_room_add_memory(box_t *buf, box_s64_t sz)
 {
 	size_t original_room_size;
 	TESTP_ABORT(buf);
 
-	buf_dump(buf, "buf_room_add_memory(): Before adding memory");
+	box_dump(buf, "buf_room_add_memory(): Before adding memory");
 	if (0 == sz) {
 		DE("Bad arguments: buf == NULL (%p) or size == 0 (%ld)\b", buf, sz);
 		ABORT_OR_RETURN(-EINVAL);
 	}
 
 	/* Save the */
-	original_room_size = buf_room_take(buf);
+	original_room_size = box_room_take(buf);
 
-	if (OK != buf_realloc(buf, original_room_size + sz)) {
+	if (OK != box_realloc(buf, original_room_size + sz)) {
 		DE("Can not reallocate buf->data\n");
 		ABORT_OR_RETURN(-ENOMEM);
 	}
 
-	buf_dump(buf, "buf_room_add_memory(): After adding memory");
+	box_dump(buf, "buf_room_add_memory(): After adding memory");
 
 	/* Clean newely allocated memory */
 	memset(buf->data + original_room_size, 0, sz);
 
-	buf_dump(buf, "buf_room_add_memory(): After cleaning new memory");
+	box_dump(buf, "buf_room_add_memory(): After cleaning new memory");
 
 	/* Case 3: realloc succeeded, the same pointer - we do nothing */
 	/* <Beeep> */
 
 	/* Increase buf->room */
-	buf_room_inc(buf, sz);
+	box_room_inc(buf, sz);
 	// buf_dump(buf, "After adding memory");
 
 	BUF_TEST(buf);
@@ -333,16 +333,16 @@ ret_t buf_room_add_memory(box_t *buf, box_s64_t sz)
 }
 
 /* Return how much bytes is available in the buf_t */
-box_s64_t buf_room_avaialable_take(box_t *buf)
+box_s64_t box_room_avaialable_take(box_t *buf)
 {
 	box_s64_t m_used = -1;
 	box_s64_t m_room = -1;
 	TESTP_ABORT(buf);
-	m_used = buf_used_take(buf);
+	m_used = box_used_take(buf);
 	if (m_used < 0) {
 		MES_ABORT("buf_used_take(buf) returned a value < 0");
 	}
-	m_room = buf_room_take(buf);
+	m_room = box_room_take(buf);
 	if (m_room < 0) {
 		MES_ABORT("buf_room_take(buf) returned a value < 0");
 	}
@@ -354,7 +354,7 @@ box_s64_t buf_room_avaialable_take(box_t *buf)
 	return m_room - m_used;
 }
 
-ret_t buf_room_assure(box_t *buf, box_s64_t expect)
+ret_t box_room_assure(box_t *buf, box_s64_t expect)
 {
 	TESTP_ABORT(buf);
 
@@ -366,25 +366,25 @@ ret_t buf_room_assure(box_t *buf, box_s64_t expect)
 	}
 
 	/* If we have enough room, return OK */
-	if (buf_room_avaialable_take(buf) >= expect) {
+	if (box_room_avaialable_take(buf) >= expect) {
 		return (OK);
 	}
 
-	return (buf_room_add_memory(buf, expect));
+	return (box_room_add_memory(buf, expect));
 }
 
-ret_t buf_clean_and_reset(box_t *buf)
+ret_t box_clean_and_reset(box_t *buf)
 {
 	TESTP_ABORT(buf);
 
-	if (OK != buf_is_valid(buf, __func__, __LINE__)) {
+	if (OK != box_is_valid(buf, __func__, __LINE__)) {
 		DE("Warning: buffer is invalid\n");
 	}
 
 	if (buf->data) {
 		/* Security: zero memory before it freed */
-		DDD("Cleaning before free, data %p, size %ld\n", buf->data, buf_room_take(buf));
-		memset(buf->data, 0, buf_room_take(buf));
+		DDD("Cleaning before free, data %p, size %ld\n", buf->data, box_room_take(buf));
+		memset(buf->data, 0, box_room_take(buf));
 		free(buf->data);
 		buf->data = NULL;
 	}
@@ -393,18 +393,18 @@ ret_t buf_clean_and_reset(box_t *buf)
 	return (OK);
 }
 
-ret_t buf_free(box_t *buf)
+ret_t box_free(box_t *buf)
 {
 	TESTP_ABORT(buf);
 
 	/* Just in case, test that the buf_t is valid */
-	if (OK != buf_is_valid(buf, __func__, __LINE__)) {
+	if (OK != box_is_valid(buf, __func__, __LINE__)) {
 		DE("Warning: buffer is invalid\n");
 	}
 
 	/* If there's an internal buffer, release it */
 	if (NULL != buf->data) {
-		TFREE_SIZE(buf->data, buf_used_take(buf));
+		TFREE_SIZE(buf->data, box_used_take(buf));
 	}
 	/* Release the buf_t struct */
 	TFREE_SIZE(buf, sizeof(box_t));
@@ -412,7 +412,7 @@ ret_t buf_free(box_t *buf)
 }
 
 /* Copy the given buffer "new_data" at tail of the buf_t */
-ret_t buf_add(box_t *buf /* Buf_t to add into */,
+ret_t box_add(box_t *buf /* Buf_t to add into */,
 			  const char *new_data /* Buffer to add */,
 			  const box_s64_t sz /* Size of the buffer to add */)
 {
@@ -426,33 +426,33 @@ ret_t buf_add(box_t *buf /* Buf_t to add into */,
 	}
 
 	/* Assure that we have enough room to add this buffer */
-	if (OK != buf_room_assure(buf, sz)) {
+	if (OK != box_room_assure(buf, sz)) {
 		DE("Can't add room into buf_t\n");
 		ABORT_OR_RETURN(-ENOMEM);
 	}
 
 	/* And now we are adding the buffer at the tail */
-	memcpy(buf->data + buf_used_take(buf), new_data, sz);
+	memcpy(buf->data + box_used_take(buf), new_data, sz);
 	/* Increase the buf->used */
-	buf_used_inc(buf, sz);
+	box_used_inc(buf, sz);
 
 	BUF_TEST(buf);
 	return (OK);
 }
 
-ret_t buf_merge(box_t *dst, box_t *src)
+ret_t box_merge(box_t *dst, box_t *src)
 {
 	ret_t rc;
 	TESTP_ABORT(dst);
 	TESTP_ABORT(src);
-	rc = buf_add(dst, src->data, src->used);
+	rc = box_add(dst, src->data, src->used);
 
 	if (OK != rc) {
 		DE("The buf_add() failed\n");
 		ABORT_OR_RETURN(rc);
 	}
 
-	if (OK != buf_clean_and_reset(src)) {
+	if (OK != box_clean_and_reset(src)) {
 		DE("Could not clean 'src' buffer\n");
 		ABORT_OR_RETURN(-ECANCELED);
 	}
@@ -460,7 +460,7 @@ ret_t buf_merge(box_t *dst, box_t *src)
 }
 
 /* Copy the given buffer "new_data" at tail of the buf_t */
-ret_t buf_replace(box_t *buf /* Buf_t to replace data in */,
+ret_t box_replace(box_t *buf /* Buf_t to replace data in */,
 				  const char *new_data /* Buffer to copy into the buf_t */,
 				  const box_s64_t size /* Size of the new buffer to set */)
 {
@@ -480,11 +480,11 @@ ret_t buf_replace(box_t *buf /* Buf_t to replace data in */,
 	}
 
 	/* We use this variable to minimize number of calls of buf_room_take(buf) */
-	current_room_size = buf_room_take(buf);
+	current_room_size = box_room_take(buf);
 
 	/* Assure that we have enough room to set the new buffer */
 	if (size > current_room_size &&  /* If size of the new buffer bigger than current buffer */
-		OK != buf_room_assure(buf, size - current_room_size)) { /* And if we could not allocated additional memory */
+		OK != box_room_assure(buf, size - current_room_size)) { /* And if we could not allocated additional memory */
 		DE("Can't add room into buf_t\n");
 		TRY_ABORT();
 		return (-ENOMEM);
@@ -494,36 +494,36 @@ ret_t buf_replace(box_t *buf /* Buf_t to replace data in */,
 	memcpy(buf->data, new_data, size);
 
 	/* Set the new buf->used */
-	buf_used_set(buf, size);
+	box_used_set(buf, size);
 
 	BUF_TEST(buf);
 	return (OK);
 }
 
-box_s64_t buf_room_take(const box_t *buf)
+box_s64_t box_room_take(const box_t *buf)
 {
 	TESTP_ABORT(buf);
 	return (buf->room);
 }
 
-void buf_room_set(box_t *buf, box_s64_t room)
+void box_room_set(box_t *buf, box_s64_t room)
 {
 	TESTP_ABORT(buf);
 	DDD("Setting buffer room: %ld\n", room);
 	buf->room = room;
 }
 
-void buf_room_inc(box_t *buf, box_s64_t inc)
+void box_room_inc(box_t *buf, box_s64_t inc)
 {
 	TESTP_ABORT(buf);
 	DDD("Inc buffer room: %ld + %ld\n", buf->room, inc);
 	buf->room += inc;
 }
 
-void buf_room_dec(box_t *buf, box_s64_t dec)
+void box_room_dec(box_t *buf, box_s64_t dec)
 {
 	TESTP_ABORT(buf);
-	if (dec > buf_room_take(buf)) {
+	if (dec > box_room_take(buf)) {
 		DE("Asked to decrement buf->room to a negative value");
 		TRY_ABORT();
 	}
@@ -537,7 +537,7 @@ void buf_room_dec(box_t *buf, box_s64_t dec)
 	}
 }
 
-ret_t buf_pack(box_t *buf)
+ret_t box_pack(box_t *buf)
 {
 	TESTP_ABORT(buf);
 
@@ -549,25 +549,25 @@ ret_t buf_pack(box_t *buf)
 
 	/*** Sanity check: dont' process invalide buffer */
 
-	if (OK != buf_is_valid(buf, __func__, __LINE__)) {
+	if (OK != box_is_valid(buf, __func__, __LINE__)) {
 		DE("Buffer is invalid - can't proceed\n");
 		TRY_ABORT();
 		return (-ECANCELED);
 	}
 
 	/*** Should we really pack it? */
-	if (buf_used_take(buf) == buf_room_take(buf)) {
+	if (box_used_take(buf) == box_room_take(buf)) {
 		/* No need to pack it */
 		return (OK);
 	}
 
 	/* Here shrink the buffer */
-	if (OK != buf_realloc(buf, buf_used_take(buf))) {
+	if (OK != box_realloc(buf, box_used_take(buf))) {
 		DE("Can not realloc buf->data\n");
 		return (BAD);
 	}
 
-	buf_room_set(buf, buf_used_take(buf));
+	box_room_set(buf, box_used_take(buf));
 
 	/* Here we are if buf->used == buf->room */
 	BUF_TEST(buf);

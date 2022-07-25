@@ -23,7 +23,7 @@ DEBUG=-DDERROR3 -DDEBUG3 -ggdb -DABORT_ON_ERROR
 #CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DFIFO_DEBUG -DDEBUG3 -I$(MOSQ_INC) -I./ -I./zhash
 CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DDEBUG3 -DFIFO_DEBUG
 
-BUFT_O=box_t.o buf_t_memory.o
+BUFT_O=box_t.o box_t_memory.o
 BUFT_A=box_t.a
 
 BASKET_O=basket.o

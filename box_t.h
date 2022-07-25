@@ -88,7 +88,7 @@ typedef struct {
  * @param const char* mes   
  * @details 
  */
-extern void buf_dump(const box_t *buf, const char *mes);
+extern void box_dump(const box_t *buf, const char *mes);
 
 /**
  * @author Sebastian Mountaniol (01/06/2020)
@@ -104,7 +104,7 @@ extern void buf_dump(const box_t *buf, const char *mes);
  *  Return -EACCESS if the buffer is read-only
  *  Return -EINVAL if buffer or data is NULL
  */
-extern ret_t buf_data_set(box_t *buf, char *data, const box_s64_t size, const box_s64_t len);
+extern ret_t box_data_set(box_t *buf, char *data, const box_s64_t size, const box_s64_t len);
 
 /**
  * @author Sebastian Mountaniol (12/19/21)
@@ -118,7 +118,7 @@ extern ret_t buf_data_set(box_t *buf, char *data, const box_s64_t size, const bo
  *  		"data" buffer still belongs to the "buf_t"; the
  *  		caller just gets pointer of this buffer.
  */
-extern void *buf_data_take(const box_t *buf);
+extern void *box_data_take(const box_t *buf);
 
 /**
  * @author Sebastian Mountaniol (12/19/21)
@@ -131,7 +131,7 @@ extern void *buf_data_take(const box_t *buf);
  *  	   -EINVAL if the buffer is NULL pointer
  * @details 
  */
-extern ret_t buf_is_data_null(box_t *buf);
+extern ret_t box_is_data_null(box_t *buf);
 
 /**
  * @author Sebastian Mountaniol (15/06/2020)
@@ -142,7 +142,7 @@ extern ret_t buf_is_data_null(box_t *buf);
  * 	Returns EINVAL if the 'buf' == NULL.
  * 	Returns EBAD if this buffer is invalid.
  */
-extern ret_t buf_is_valid(const box_t *buf, const char *who, const int line);
+extern ret_t box_is_valid(const box_t *buf, const char *who, const int line);
 
 /**
  * @func buf_t* buf_new(size_t size)
@@ -152,7 +152,7 @@ extern ret_t buf_is_valid(const box_t *buf, const char *who, const int line);
  * @param size_t size Data buffer size, may be 0
  * @return buf_t* New buf_t structure.
  */
-extern box_t *buf_new(box_s64_t size);
+extern box_t *box_new(box_s64_t size);
 
 /**
  * @author Sebastian Mountaniol (01/06/2020)
@@ -163,7 +163,7 @@ extern box_t *buf_new(box_s64_t size);
  * @return void* Data buffer pointer on success, NULL on error. Warning: if the but_t did not have a
  * 	buffer (i.e. buf->data was NULL) the NULL will be returned.
  */
-extern void *buf_data_steal(box_t *buf);
+extern void *box_data_steal(box_t *buf);
 
 /**
  * @author Sebastian Mountaniol (01/06/2020)
@@ -174,7 +174,7 @@ extern void *buf_data_steal(box_t *buf);
  * @param buf_t * buf Buffer to extract data
  * @return void* Pointer to buffer on success (buf if the buffer is empty NULL will be returned),
  */
-extern void *buf_data_steal_and_release(box_t *buf);
+extern void *box_data_steal_and_release(box_t *buf);
 
 /**
  * @brief Remove data from buffer (and free the data), set buf->room = buf->len = 0
@@ -186,7 +186,7 @@ extern void *buf_data_steal_and_release(box_t *buf);
  * @details If the buffer is invalid (see buf_is_valid()),
  * @details the opreration won't be interrupted and buffer will be cleaned.
  */
-extern ret_t buf_clean_and_reset(box_t *buf);
+extern ret_t box_clean_and_reset(box_t *buf);
 
 /**
  * @func int buf_room_add_memory(buf_t *buf, size_t size)
@@ -204,7 +204,7 @@ extern ret_t buf_clean_and_reset(box_t *buf);
  *  case the buffer kept untouched. -ENOKEY if the buffer marked
  *  as CAANRY but CANARY work can't be added.
  */
-extern ret_t buf_room_add_memory(box_t *buf, box_s64_t size);
+extern ret_t box_room_add_memory(box_t *buf, box_s64_t size);
 
 /**
  * @author Sebastian Mountaniol (6/10/22)
@@ -218,7 +218,7 @@ extern ret_t buf_room_add_memory(box_t *buf, box_s64_t size);
  *  		is used. This function returns the "room" remains:
  *  		"room - used"
  */
-extern box_s64_t buf_room_avaialable_take(box_t *buf);
+extern box_s64_t box_room_avaialable_take(box_t *buf);
 
 /**
  * @func int buf_room_assure(buf_t *buf, size_t expect)
@@ -233,7 +233,7 @@ extern box_s64_t buf_room_avaialable_take(box_t *buf);
  * 	EINVAL if buf is NULL or 'expected' == 0
  * 	Also can return all error statuses of buf_add_room()
  */
-extern ret_t buf_room_assure(box_t *buf, box_s64_t expect);
+extern ret_t box_room_assure(box_t *buf, box_s64_t expect);
 
 /**
  * @func int buf_t_free_force(buf_t *buf)
@@ -245,7 +245,7 @@ extern ret_t buf_room_assure(box_t *buf, box_s64_t expect);
  * 	EACCESS if the buf is read-only
  * 	ECANCELED if the buffer is invalid
  */
-extern ret_t buf_free(box_t *buf);
+extern ret_t box_free(box_t *buf);
 
 /**
  * @func err_t buf_add(buf_t *buf, const char *new_data, const size_t size)
@@ -260,7 +260,7 @@ extern ret_t buf_free(box_t *buf);
  * 	EACCESS if the 'buf' is read-only
  * 	ENOMEM if new memory can't be allocated
  */
-extern ret_t buf_add(box_t *buf, const char *new_data, const box_s64_t size);
+extern ret_t box_add(box_t *buf, const char *new_data, const box_s64_t size);
 
 /**
  * @author Sebastian Mountaniol (7/24/22)
@@ -277,7 +277,7 @@ extern ret_t buf_add(box_t *buf, const char *new_data, const box_s64_t size);
  *  		In case the operation failed, the status of both
  *  		'src' and 'dst' is undefined.
  */
-extern ret_t buf_merge(box_t *dst, box_t *src);
+extern ret_t box_merge(box_t *dst, box_t *src);
 /**
  * @author Sebastian Mountaniol (7/17/22)
  * @brief Replace current data in the Buf_t to a new buffer
@@ -293,7 +293,7 @@ extern ret_t buf_merge(box_t *dst, box_t *src);
  *  		must be not NULL, and its size must be > 0,
  *  		otherwise this function fails or returns an error.
  */
-ret_t buf_replace(box_t *buf, const char *new_data, const box_s64_t size );
+ret_t box_replace(box_t *buf, const char *new_data, const box_s64_t size );
 
 /**
  * @author Sebastian Mountaniol (14/06/2020)
@@ -303,7 +303,7 @@ ret_t buf_replace(box_t *buf, const char *new_data, const box_s64_t size );
  * @return ssize_t Number of bytes used on success
  * 	EINVAL if the 'buf' == NULL
  */
-extern box_s64_t buf_used_take(const box_t *buf);
+extern box_s64_t box_used_take(const box_t *buf);
 
 /**
  * @author Sebastian Mountaniol (12/16/21)
@@ -315,7 +315,7 @@ extern box_s64_t buf_used_take(const box_t *buf);
  * 
  * @details 
  */
-extern void buf_used_set(box_t *buf, box_s64_t used);
+extern void box_used_set(box_t *buf, box_s64_t used);
 
 /**
  * @author Sebastian Mountaniol (12/16/21)
@@ -327,7 +327,7 @@ extern void buf_used_set(box_t *buf, box_s64_t used);
  * @param inc - The value to add to the buf->used
  * @details 
  */
-extern void buf_used_inc(box_t *buf, box_s64_t used);
+extern void box_used_inc(box_t *buf, box_s64_t used);
 
 /**
  * @author Sebastian Mountaniol (12/16/21)
@@ -345,7 +345,7 @@ extern void buf_used_inc(box_t *buf, box_s64_t used);
  *  		attempt to set "used" a negative number.
  *
  */
-extern void buf_used_dec(box_t *buf, box_s64_t dec);
+extern void box_used_dec(box_t *buf, box_s64_t dec);
 
 /**
  * @author Sebastian Mountaniol (14/06/2020)
@@ -354,7 +354,7 @@ extern void buf_used_dec(box_t *buf, box_s64_t dec);
  * @return ssize_t How many bytes allocated for this 'buf'
  * 	EINVAL if the 'buf' == NULL
  */
-extern box_s64_t buf_room_take(const box_t *buf);
+extern box_s64_t box_room_take(const box_t *buf);
 
 /**
  * @author Sebastian Mountaniol (12/16/21)
@@ -364,7 +364,7 @@ extern box_s64_t buf_room_take(const box_t *buf);
  * 
  * @details 
  */
-extern void buf_room_set(box_t *buf, box_s64_t room);
+extern void box_room_set(box_t *buf, box_s64_t room);
 
 /**
  * @author Sebastian Mountaniol (12/16/21)
@@ -375,7 +375,7 @@ extern void buf_room_set(box_t *buf, box_s64_t room);
  * @return ret_t OK on sucess, BAD on an error
  * @details 
  */
-extern void buf_room_inc(box_t *buf, box_s64_t inc);
+extern void box_room_inc(box_t *buf, box_s64_t inc);
 
 /**
  * @author Sebastian Mountaniol (12/16/21)
@@ -389,7 +389,7 @@ extern void buf_room_inc(box_t *buf, box_s64_t inc);
  * @details The 'dec' must be less or equal to the buf->room,
  *  		else BAD error returned and no value decremented
  */
-extern void buf_room_dec(box_t *buf, box_s64_t dec);
+extern void box_room_dec(box_t *buf, box_s64_t dec);
 
 /**
  * @author Sebastian Mountaniol (01/06/2020)
@@ -407,7 +407,7 @@ extern void buf_room_dec(box_t *buf, box_s64_t dec);
  * 	ENOMEM if internal realloc can't reallocate / shring memory
  * 	Also can return one of buf_set_canary() errors
  */
-extern ret_t buf_pack(box_t *buf);
+extern ret_t box_pack(box_t *buf);
 
 /**
  * @author Sebastian Mountaniol (18/06/2020)
@@ -423,11 +423,11 @@ extern ret_t buf_detect_used(box_t *buf);
 
 /* Additional defines */
 #ifdef BUF_DEBUG
-	#define BUF_TEST(buf) do {if (0 != buf_is_valid(buf, __func__, __LINE__)){fprintf(stderr, "######>>> Buffer invalid here: func: %s file: %s + %d [allocated here: %s +%d %s()]\n", __func__, __FILE__, __LINE__, buf->filename, buf->line, buf->func);}} while (0)
+	#define BUF_TEST(buf) do {if (0 != box_is_valid(buf, __func__, __LINE__)){fprintf(stderr, "######>>> Buffer invalid here: func: %s file: %s + %d [allocated here: %s +%d %s()]\n", __func__, __FILE__, __LINE__, buf->filename, buf->line, buf->func);}} while (0)
 	#define BUF_DUMP(buf) do {DD("[BUFDUMP]: [%s +%d] buf = %p, data = %p, room = %u, used = %u [allocated here: %s +%d %s()]\n", __func__, __LINE__, buf, buf->data, buf->room, buf->used, buf->filename, buf->line, buf->func);} while(0)
 	#define BUF_DUMP_ERR(buf) do {DD("[BUFDUMP]: [%s +%d] buf = %p, data = %p, room = %u, used = %u [allocated here: %s +%d %s()]\n", __func__, __LINE__, buf, buf->data, buf->room, buf->used, buf->filename, buf->line, buf->func);} while(0)
 #else
-	#define BUF_TEST(buf) do {if (0 != buf_is_valid(buf, __func__, __LINE__)){fprintf(stderr, "######>>> Buffer test invalid here: func: %s file: %s + %d\n", __func__, __FILE__, __LINE__);}} while (0)
+	#define BUF_TEST(buf) do {if (0 != box_is_valid(buf, __func__, __LINE__)){fprintf(stderr, "######>>> Buffer test invalid here: func: %s file: %s + %d\n", __func__, __FILE__, __LINE__);}} while (0)
 	#define BUF_DUMP(buf) do {DD("[BUFDUMP]: [%s +%d] buf = %p, data = %p, room = %u, used = %u\n", __func__, __LINE__, buf, buf->data, buf->room, buf->used);} while(0)
 	#define BUF_DUMP_ERR(buf) do {DD("[BUFDUMP]: [%s +%d] buf = %p, data = %p, room = %u, used = %u\n", __func__, __LINE__, buf, buf->data, buf->room, buf->used);} while(0)
 

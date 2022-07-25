@@ -7,7 +7,7 @@
  * typedef int ret_t;
  */
 #include <stdint.h>
-#include "buf_t.h"
+#include "box_t.h"
 
 /*
  * The Basket structure holds zero or more boxes.
@@ -217,7 +217,7 @@ extern ret_t box_remove(basket_t *basket, const box_u32_t num);
  *  		memory of (2 + 3), the box 3 will be an empty box,
  *  		box 4 and 5 will stay boxes 4 and 5
  */
-extern ret_t box_merge(basket_t *basket, const box_u32_t src, const box_u32_t dst);
+extern ret_t box_merge_box(basket_t *basket, const box_u32_t src, const box_u32_t dst);
 
 /**
  * @author Sebastian Mountaniol (6/12/22)
