@@ -153,8 +153,13 @@ ret_t box_is_valid(const box_t *box, const char *who, const int line)
 box_t *box_new(box_s64_t size)
 {
 	box_t  *box;
+	size_t real_size;
 
-	size_t real_size = size;
+	if (size < 0) {
+		ABORT_OR_RETURN(NULL);
+	}
+
+	real_size = size;
 
 	box = (box_t *)zmalloc(sizeof(box_t));
 	T_RET_ABORT(box, NULL);
@@ -269,8 +274,8 @@ static ret_t box_realloc(box_t *box, size_t new_size)
 }
 
 /* This is an internal function. Here we realloc the internal box_t buffer */
-static ret_t box_realloc_old(box_t *box, size_t new_size)
-{
+#if 0 /* SEB */
+static ret_t box_realloc_old(box_t *box, size_t new_size){
 	void   *tmp;
 	TESTP_ABORT(box);
 	tmp = realloc(box->data, new_size);
@@ -291,6 +296,7 @@ static ret_t box_realloc_old(box_t *box, size_t new_size)
 	}
 	return OK;
 }
+#endif
 
 ret_t box_room_add_memory(box_t *box, box_s64_t sz)
 {
@@ -427,6 +433,8 @@ ret_t box_add(box_t *box /* box_t to add into */,
 		DE("Can't add room into box_t\n");
 		ABORT_OR_RETURN(-ENOMEM);
 	}
+
+	box_dump(box, "From buf_add");
 
 	/* And now we are adding the buffer at the tail */
 	memcpy(box->data + box_used_take(box), new_data, sz);

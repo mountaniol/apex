@@ -6,12 +6,21 @@
 #include "box_t.h"
 #include "debug.h"
 
-const char *lorem_ipsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\0";
+const char *string_alice_all = "It was the White Rabbit, trotting slowly back again, and looking anxiously about as it went, as if it had lost something; and she heard it muttering to itself 'The Duchess! The Duchess! Oh my dear paws! Oh my fur and whiskers! She’ll get me executed, as sure as ferrets are ferrets! Where can I have dropped them, I wonder?' Alice guessed in a moment that it was looking for the fan and the pair of white kid gloves, and she very good-naturedly began hunting about for them, but they were nowhere to be seen—everything seemed to have changed since her swim in the pool, and the great hall, with the glass table and the little door, had vanished completely.";
+const char *string_alice_1   = "It was the White Rabbit, trotting slowly back again, ";
+const char *string_alice_2   = "and looking anxiously about as it went, as if it had lost something; ";
+const char *string_alice_3   = "and she heard it muttering to itself 'The Duchess! The Duchess! Oh my dear paws! Oh my fur and whiskers! ";
+const char *string_alice_4   = "She’ll get me executed, as sure as ferrets are ferrets! Where can I have dropped them, I wonder?' ";
+const char *string_alice_5   = "Alice guessed in a moment that it was looking for the fan and the pair of white kid gloves, ";
+const char *string_alice_6   = "and she very good-naturedly began hunting about for them, but they were nowhere to be seen—everything ";
+const char *string_alice_7   = "seemed to have changed since her swim in the pool, and the great hall, ";
+const char *string_alice_8   = "with the glass table and the little door, had vanished completely.";
+
+const char *lorem_ipsum      = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.\0";
 
 /* Allocate a basket with asked number of boxes */
 static basket_t *basket_new_test(void)
 {
-	uint32_t i;
 	basket_t *basket = basket_new();
 
 	/* Check that mbox is allocated */
@@ -181,22 +190,42 @@ static int box_new_from_data_simple_test(void)
 	return 0;
 }
 
-
-void basket_collapse_in_place_test(void)
+static int box_data_insert_and_validate(basket_t *basket, const box_u32_t box_num, const char *data, const size_t data_len)
 {
-	ret_t      rc;
-	basket_t   *basket     = NULL;
-	char * box0_data_ptr;
+	ret_t  rc;
+	char   *data_ptr     = NULL;
+	size_t data_ptr_size;
+	TESTP(basket, -1);
+	TESTP(data, -1);
 
-	const char *string_all = "It was the White Rabbit, trotting slowly back again, and looking anxiously about as it went, as if it had lost something; and she heard it muttering to itself 'The Duchess! The Duchess! Oh my dear paws! Oh my fur and whiskers! She’ll get me executed, as sure as ferrets are ferrets! Where can I have dropped them, I wonder?' Alice guessed in a moment that it was looking for the fan and the pair of white kid gloves, and she very good-naturedly began hunting about for them, but they were nowhere to be seen—everything seemed to have changed since her swim in the pool, and the great hall, with the glass table and the little door, had vanished completely.";
-	const char *string_1   = "It was the White Rabbit, trotting slowly back again, ";
-	const char *string_2   = "and looking anxiously about as it went, as if it had lost something; ";
-	const char *string_3   = "and she heard it muttering to itself 'The Duchess! The Duchess! Oh my dear paws! Oh my fur and whiskers! ";
-	const char *string_4   = "She’ll get me executed, as sure as ferrets are ferrets! Where can I have dropped them, I wonder?' ";
-	const char *string_5   = "Alice guessed in a moment that it was looking for the fan and the pair of white kid gloves, ";
-	const char *string_6   = "and she very good-naturedly began hunting about for them, but they were nowhere to be seen—everything ";
-	const char *string_7   = "seemed to have changed since her swim in the pool, and the great hall, ";
-	const char *string_8   = "with the glass table and the little door, had vanished completely.";
+	rc = box_new_from_data(basket, data, data_len);
+	if (rc < 0) {
+		DE("[TEST] Failed adding a string to a box\n");
+		abort();
+	}
+
+	data_ptr = box_data_ptr(basket, box_num);
+	TESTP(data_ptr, -1);
+
+	data_ptr_size = box_data_size(basket, box_num);
+	if (data_ptr_size != data_len) {
+		DE("[TEST] The size (%lu) of data in the box[%u] is differ from expected (%lu)\n", data_ptr_size, box_num, data_len);
+		return -1;
+	}
+
+	if (memcmp(data_ptr, data, data_len)) {
+		DE("[TEST] The data in box and testes data are differern\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+/* Create a basket, and create multiple boxes contain Alice text.
+   The created basket is validated */
+static basket_t *create_alice_basket(void)
+{
+	basket_t *basket   = NULL;
 
 	basket = basket_new();
 	if (NULL == basket) {
@@ -204,51 +233,58 @@ void basket_collapse_in_place_test(void)
 		abort();
 	}
 
-	rc = box_new_from_data(basket, string_1, strlen(string_1));
-	if (rc < 0) {
+	if (0 != box_data_insert_and_validate(basket, 0, string_alice_1, strlen(string_alice_1))) {
 		DE("[TEST] Failed adding a string to a box\n");
 		abort();
 	}
 
-	rc = box_new_from_data(basket, string_2, strlen(string_2));
-	if (rc < 0) {
+	if (0 != box_data_insert_and_validate(basket, 1, string_alice_2, strlen(string_alice_2))) {
 		DE("[TEST] Failed adding a string to a box\n");
 		abort();
 	}
 
-	rc = box_new_from_data(basket, string_3, strlen(string_3));
-	if (rc < 0) {
+	if (0 != box_data_insert_and_validate(basket, 2, string_alice_3, strlen(string_alice_3))) {
 		DE("[TEST] Failed adding a string to a box\n");
 		abort();
 	}
 
-	rc = box_new_from_data(basket, string_4, strlen(string_4));
-	if (rc < 0) {
+	if (0 != box_data_insert_and_validate(basket, 3, string_alice_4, strlen(string_alice_4))) {
 		DE("[TEST] Failed adding a string to a box\n");
 		abort();
 	}
 
-	rc = box_new_from_data(basket, string_5, strlen(string_5));
-	if (rc < 0) {
+	if (0 != box_data_insert_and_validate(basket, 4, string_alice_5, strlen(string_alice_5))) {
 		DE("[TEST] Failed adding a string to a box\n");
 		abort();
 	}
 
-	rc = box_new_from_data(basket, string_6, strlen(string_6));
-	if (rc < 0) {
+	if (0 != box_data_insert_and_validate(basket, 5, string_alice_6, strlen(string_alice_6))) {
 		DE("[TEST] Failed adding a string to a box\n");
 		abort();
 	}
 
-	rc = box_new_from_data(basket, string_7, strlen(string_7));
-	if (rc < 0) {
+	if (0 != box_data_insert_and_validate(basket, 6, string_alice_7, strlen(string_alice_7))) {
 		DE("[TEST] Failed adding a string to a box\n");
 		abort();
 	}
 
-	rc = box_new_from_data(basket, string_8, strlen(string_8));
-	if (rc < 0) {
+	if (0 != box_data_insert_and_validate(basket, 7, string_alice_8, strlen(string_alice_8))) {
 		DE("[TEST] Failed adding a string to a box\n");
+		abort();
+	}
+
+	return basket;
+}
+
+static void basket_collapse_in_place_test(void)
+{
+	ret_t    rc;
+	basket_t *basket        = NULL;
+	char     *box0_data_ptr;
+
+	basket = create_alice_basket();
+	if (NULL == basket) {
+		DE("[TEST] Failed a basket creation\n");
 		abort();
 	}
 
@@ -264,13 +300,57 @@ void basket_collapse_in_place_test(void)
 		abort();
 	}
 
-	if (0 != strncmp(string_all, box0_data_ptr, strnlen(string_all, 1024))) {
+	if (0 != strncmp(string_alice_all, box0_data_ptr, strnlen(string_alice_all, 1024))) {
 		DE("[TEST] Failed compare string in box[0] with string_all\n");
 		abort();
 	}
 
-	if(OK != basket_release(basket)) {
+	if (OK != basket_release(basket)) {
 		DE("[TEST] Failed basket releasing\n");
+		abort();
+	}
+}
+
+void basket_to_buf_test(void)
+{
+	ret_t    rc;
+	basket_t *basket        = NULL;
+	basket_t *basket_2        = NULL;
+	char     *flat_buf;
+	size_t   flat_buf_size;
+
+	basket = create_alice_basket();
+	if (NULL == basket) {
+		DE("[TEST] Failed a basket creation\n");
+		abort();
+	}
+
+	flat_buf = basket_to_buf(basket, &flat_buf_size);
+	if (NULL == flat_buf) {
+		DE("[TEST] Can not create a flat memory buffer from basket\n");
+		abort();
+	}
+
+	basket_2 = basket_from_buf(flat_buf, flat_buf_size);
+	if (NULL == basket_2) {
+		DE("[TEST] Can not create a basket from flat memory buffer\n");
+		abort();
+	}
+
+	if(basket_compare_basket(basket, basket_2)) {
+		DE("[TEST] Original basket and the restored basket are not the same\n");
+		abort();
+	}
+
+	rc = basket_release(basket);
+	if (0 != rc) {
+		DE("[TEST] Can not release the original basket\n");
+		abort();
+	}
+
+	rc = basket_release(basket_2);
+	if (0 != rc) {
+		DE("[TEST] Can not release the restored basket\n");
 		abort();
 	}
 }
@@ -281,5 +361,6 @@ int main(void)
 	box_new_from_data_simple_test();
 	box_new_from_data_test();
 	basket_collapse_in_place_test();
+	basket_to_buf_test();
 }
 

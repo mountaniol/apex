@@ -7,6 +7,8 @@
 #include "debug.h"
 #include "tests.h"
 
+static ret_t box_new_from_data_by_index(basket_t *basket, box_u32_t box_index, const void *buffer, const box_u32_t buffer_size);
+
 static void basket_free_mem(void *mem, const char *who, const int line)
 {
 	DD("FREE / %s +%d / %p\n", who, line, mem);
@@ -159,7 +161,10 @@ ret_t basket_clean(basket_t *basket)
 
 static ret_t basket_grow_box_pointers(basket_t *basket)
 {
-	void *tmp;
+	void   *tmp;
+
+	char   *clean_start_bytes_p;
+	size_t clean_szie_bytes;
 
 	TESTP_ABORT(basket);
 
@@ -171,6 +176,14 @@ static ret_t basket_grow_box_pointers(basket_t *basket)
 		DE("Allocation failed\n");
 		ABORT_OR_RETURN(-1);
 	}
+
+	/* Clean the freshly allocated memory */
+	clean_start_bytes_p = (char *)tmp + (basket->boxes_allocated * sizeof(void *));
+	clean_szie_bytes = BASKET_BUFS_GROW_RATE * sizeof(void *);
+	//DD("Going to clean: tmp (%p) + basket->boxes_allocated (%u) == %p, 0, BASKET_BUFS_GROW_RATE (%d) * sizeof(void *) %(zu)\n",
+	//   (char *) tmp, basket->boxes_allocated, (tmp + basket->boxes_allocated), BASKET_BUFS_GROW_RATE, sizeof(void *) );
+	memset(clean_start_bytes_p, 0, clean_szie_bytes);
+
 
 	/* If we need to allocate more pointers in basket->boxes array,
 	 * we allocate more than on.
@@ -186,6 +199,7 @@ static ret_t basket_grow_box_pointers(basket_t *basket)
 		// free(basket->boxes);
 		basket->boxes = tmp;
 	}
+
 	return 0;
 }
 
@@ -380,11 +394,11 @@ void *basket_to_buf(const basket_t *basket, size_t *size)
 {
 	box_u32_t            i;
 	char                 *buf;
-	size_t               buf_size          = 0;
-	size_t               buf_offset        = 0;
+	size_t               buf_size             = 0;
+	size_t               buf_offset           = 0;
 
-	basket_send_header_t basket_buf_header;
-	box_dump_t           box_dump_header;
+	basket_send_header_t *basket_buf_header_p;
+	box_dump_t           *box_dump_header_p;
 
 	TESTP_ABORT(basket);
 	TESTP_ABORT(size);
@@ -409,41 +423,60 @@ void *basket_to_buf(const basket_t *basket, size_t *size)
 
 	memset(buf, 0, buf_size);
 
+	basket_buf_header_p = (basket_send_header_t *)buf;
+
 	/* Let's start fill the buffer */
 
 	/* First, fill the header */
-	basket_buf_header.total_len = buf_size;
-	basket_buf_header.boxes_num = basket->boxes_used;
+	basket_buf_header_p->total_len = buf_size;
+	basket_buf_header_p->boxes_num = basket->boxes_used;
+
+	basket_buf_header_p->total_len = buf_size;
+	basket_buf_header_p->boxes_num = basket->boxes_used;
 
 	/* Watermark: a predefined pattern. */
-	basket_buf_header.watermark = WATERMARK_BASKET;
+	basket_buf_header_p->watermark = WATERMARK_BASKET;
 
 	/* TODO: The checksum not implemented yet */
-	basket_buf_header.basket_checksum = 0;
+	basket_buf_header_p->basket_checksum = 0;
 
-	memcpy(buf, &basket_buf_header, sizeof(basket_send_header_t));
+	//memcpy(buf, &basket_buf_header, sizeof(basket_send_header_t));
 	buf_offset += sizeof(basket_send_header_t);
 
 	/* Now we run on array of boxes, and add one by one to the buffer */
 
 	for (i = 0; i < basket->boxes_used; i++) {
-		box_t  *box     = basket_get_box(basket, i);
+		box_t     *box      = basket_get_box(basket, i);
+		char      *box_data;
+		box_s64_t box_used  = 0;
+
+		box_dump_header_p = (box_dump_t *)(buf + buf_offset);
 
 		/* Fill the header, for every box we create and fill the header */
-		box_dump_header.box_size = box_used_take(box);
-		box_dump_header.watermark = WATERMARK_BOX;
+		if (box) {
+			box_used = box_used_take(box);
+		}
+
+		box_dump_header_p->box_size = box_used;
+		box_dump_header_p->watermark = WATERMARK_BOX;
 
 		/* TODO */
-		box_dump_header.box_checksum = 0;
+		box_dump_header_p->box_checksum = 0;
 
-		memcpy(buf + buf_offset, &box_dump_header, sizeof(box_dump_t));
+		// memcpy(buf + buf_offset, &box_dump_header, sizeof(box_dump_t));
 		buf_offset += sizeof(box_dump_t);
 
 		/* If this box is NULL, or is empty, we don't add any data and skip */
-		if (0 == box_dump_header.box_size) continue;
+		if (0 == box_used) continue;
 
-		memcpy(buf + buf_offset, box_data_take(box), box_dump_header.box_size);
-		buf_offset += box_dump_header.box_size;
+		box_data = box_data_take(box);
+
+		if (NULL == box_data) {
+			DE("Critical error: box data == NULL but box->used > 0 (%d)\n", box_dump_header_p->box_size);
+		}
+
+		memcpy((buf + buf_offset), box_data, box_used);
+		buf_offset += box_used;
 	}
 
 	DDD("Returning buffer, size: %zu, counted offset is: %zu\n", buf_size, buf_offset);
@@ -453,7 +486,7 @@ void *basket_to_buf(const basket_t *basket, size_t *size)
 
 basket_t *basket_from_buf(void *buf, const size_t size)
 {
-	uint32_t             i;
+	uint32_t             box_index;
 	uint32_t             buf_offset         = 0;
 	basket_t             *basket;
 	basket_send_header_t *basket_buf_header;
@@ -478,34 +511,58 @@ basket_t *basket_from_buf(void *buf, const size_t size)
 	basket = basket_new();
 	TESTP(basket, NULL);
 
+	/* Now, we need to pre-allocate ->box pointers; grow it until we have enough */
+	while (basket_buf_header->boxes_num > basket->boxes_allocated) {
+		basket_grow_box_pointers(basket);
+	}
+
 	buf_offset = sizeof(basket_send_header_t);
 
-	for (i = 0; i < basket_buf_header->boxes_num; i++) {
-		box_dump_header = (box_dump_t *)buf_char + buf_offset;
+	for (box_index = 0; box_index < basket_buf_header->boxes_num; box_index++) {
 
+		/* Advance the pointer to the next box header */
+		box_dump_header = (box_dump_t *)(buf_char + buf_offset);
+
+		/* Test watermark */
 		if (WATERMARK_BOX != box_dump_header->watermark) {
-			DE("Wrong box: wrong watermark. Expected %X but it is %X\n", WATERMARK_BOX, box_dump_header->watermark);
+			DE("Wrong box[%u]: wrong watermark. Expected %X but it is %X\n", box_index, WATERMARK_BOX, box_dump_header->watermark);
 			if (0 != basket_release(basket)) {
 				DE("Could not release basket\n");
 			}
 			ABORT_OR_RETURN(NULL);
 		}
 
+		/* Advance pointer: right after the box header is the box data */
 		buf_offset += sizeof(box_dump_t);
 
-		/* If there us no data, we do not even add a box */
+		/* If there no data, we do not even call the box creation, and the box pointer stays NULL */
 		if (0 == box_dump_header->box_size) {
 			continue;
 		}
 
-		if (0 != box_add_to_tail(basket, i, (buf_char + buf_offset), box_dump_header->box_size)) {
-			DE("Adding a buffer size (%u) to tail of box (%u) failed\n", box_dump_header->box_size, i);
-			if (basket_release(basket)) {
+		/* Test that the memory area we pass to box_new_from_data_by_index() is in boundaries of the buf */
+		if (buf_offset + box_dump_header->box_size > size) {
+			DE("Wrong: The size of box[%u] overhead size of the whole buffer: %d = buf_offset (%d) + box_dump_header->box_size (%d) > size (%zu)\n",
+			   box_index, buf_offset + box_dump_header->box_size, buf_offset, box_dump_header->box_size, size);
+			abort();
+		}
+
+		/* Create a new box */
+		if (OK != box_new_from_data_by_index(basket, box_index, buf_char + buf_offset, box_dump_header->box_size)) {
+			DE("Adding a buffer size (%u) to tail of box (%u) failed\n", box_dump_header->box_size, box_index);
+
+
+			if (0 != basket_release(basket)) {
 				DE("Could not release basket\n");
 			}
 			ABORT_OR_RETURN(NULL);
 		}
+
+		/* Advance the offset */
 		buf_offset += box_dump_header->box_size;
+
+		/* Increase number of used boxes */
+		basket->boxes_used++;
 	}
 
 	return basket;
@@ -525,6 +582,55 @@ basket_t *basket_from_buf_t(const box_t *buf)
 	TESTP_ABORT(buf);
 	return NULL;
 	/* TODO */
+}
+
+/* Compare two backets, return 0 if they are equal, 1 if not, < 0 on an error */
+int basket_compare_basket(basket_t *basket_left, basket_t *basket_right)
+{
+	box_u32_t box_index;
+	int       memcmp_rc;
+	TESTP(basket_left, -1);
+	TESTP(basket_right, -1);
+
+	if (basket_left->boxes_used != basket_right->boxes_used) {
+		DDD("basket_left->boxes_used (%u) != basket_right->boxes_used (%u)\n",
+			basket_left->boxes_used, basket_right->boxes_used);
+		return 1;
+	}
+
+	for (box_index = 0; box_index < basket_right->boxes_used; box_index++) {
+		box_t *box_right = basket_right->boxes[box_index];
+		box_t *box_left  = basket_left->boxes[box_index];
+
+		if (box_right != NULL && box_left == NULL) {
+			DDD("box_right[%u] != NULL && box_left[%u] == NULL\n", box_index, box_index);
+			return 1;
+		}
+
+		if (box_right == NULL && box_left != NULL) {
+			DDD("box_right[%u] == NULL && box_left[%u] != NULL\n", box_index, box_index);
+			return 1;
+		}
+
+		if (box_right == NULL && box_left == NULL) {
+			continue;
+		}
+
+		if (box_right->used != box_left->used) {
+			DDD("box_right[%u]->used (%ld) != box_left[%u]->used (%ld)\n",
+				box_index, box_right->used, box_index, box_left->used);
+			return 1;
+		}
+
+		memcmp_rc = memcmp(box_right->data, box_left->data, box_right->used);
+		if (0 != memcmp_rc) {
+			DDD("box_right[%u]->data != box_left[%u]->data at %d : data size is %lu\n",
+				box_index, box_index, memcmp_rc, box_right->used);
+			return 1;
+		}
+	}
+
+	return 0;
 }
 
 /* Create a new basket and add data */
@@ -567,6 +673,47 @@ ssize_t box_new_from_data(basket_t *basket, const void *buffer, const box_u32_t 
 
 	/* Return the number of the new box */
 	return basket_get_last_box_index(basket);
+}
+
+/* Set a box in certain position; we need this function when restore basket from a flat buffer */
+static ret_t box_new_from_data_by_index(basket_t *basket, box_u32_t box_index, const void *buffer, const box_u32_t buffer_size)
+{
+	box_t     *box;
+	TESTP_ABORT(basket);
+	TESTP_ABORT(buffer);
+
+	/* Add a new box */
+	while (basket->boxes_allocated < box_index) {
+		if (0 != basket_grow_box_pointers(basket)) {
+			ABORT_OR_RETURN(-1);
+		}
+	}
+
+	if (NULL == basket->boxes[box_index]) {
+		DD("Allocating new box\n");
+		box = box_new(0);
+	} else {
+		DD("There is a box, use it\n");
+		box = basket->boxes[box_index];
+	}
+
+	if (NULL == box) {
+		ABORT_OR_RETURN(-1);
+	}
+
+	DD("Going to add data in the tail of a the buf[%u], new data size is %u\n", box_index, buffer_size);
+	if (OK != box_add(box, buffer, buffer_size)) {
+		DE("Could not add data into the new box[%u]: new data size %u\n", box_index, buffer_size);
+		ABORT_OR_RETURN(-1);
+	}
+
+	box_dump(box, "box_new_from_data(): Added new data");
+
+	/* Now set the box at given index */
+	basket->boxes[box_index] = box;
+
+	/* Return the number of the new box */
+	return OK;
 }
 
 /* Add data to a basket */

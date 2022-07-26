@@ -326,6 +326,17 @@ extern basket_t *basket_from_buf(void *buf, const size_t size);
  */
 extern basket_t *basket_from_buf_t(const box_t *buf);
 
+/**
+ * @author Sebastian Mountaniol (7/26/22)
+ * @brief Compare tow baskets, including box data. 
+ * @param basket_t* basket_left The first basket
+ * @param basket_t* basket_right The second basket
+ * @return int 0 if two baskets are equal, 1 if if they are
+ *  	   differ from each other, -1 on an error
+ * @details 
+ */
+extern int basket_compare_basket(basket_t *basket_left, basket_t *basket_right);
+
 /*** A single sector operation - add, remove, modifu sector's memory ***/
 
 /**
