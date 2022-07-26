@@ -18,10 +18,10 @@ ifneq ($(linker),)
 	LD=$(linker)
 endif
 
-DEBUG=-DDERROR3 -DDEBUG3 -ggdb -DABORT_ON_ERROR -DENABLE_BOX_DUMP
+DEBUG=-DDERROR3 -DDEBUG2 -ggdb -DABORT_ON_ERROR #-DENABLE_BOX_DUMP
 #CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DDEBUG3 -I$(MOSQ_INC) -I./ -I./zhash
 #CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DFIFO_DEBUG -DDEBUG3 -I$(MOSQ_INC) -I./ -I./zhash
-CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DDEBUG3 -DFIFO_DEBUG
+CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DFIFO_DEBUG
 
 BUFT_O=box_t.o box_t_memory.o
 BUFT_A=box_t.a

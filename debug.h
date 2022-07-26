@@ -7,6 +7,7 @@
 /*@=skipposixheaders@*/
 
 #ifdef DDD
+		#undef PR3
         #undef DDD
 #endif
 #ifdef DD
@@ -40,9 +41,11 @@
 /* Extended debug print */
 #ifdef DEBUG3
         #define DDD _D_PRINT
+		#define PR3(fmt, ...) do{printf(fmt, ##__VA_ARGS__);}while(0)
 #else
 /* Extra debug */
         #define DDD(x,...) do{}while(0)
+        #define PR3(x,...) do{}while(0)
 #endif // DEBUG3
 
 /* Error Debug print */

@@ -39,6 +39,8 @@ static basket_t *basket_new_test(void)
 	if (0 != basket_release(basket)) {
 		DE("[TEST] Can not release basket\n");
 	}
+
+	PR("[TEST] Success: A simple 'basket create and destroy' test\n");
 	return 0;
 }
 
@@ -70,7 +72,7 @@ static int box_new_from_data_test(void)
 
 		DDD("[TEST] Starting test [%d]: %u boxes basket\n", i, number_of_boxes);
 
-		PR("\n============================== %.4d ========================================\n\n", i);
+		PR3("\n============================== %.4d ========================================\n\n", i);
 
 		/* We create an empty basket, in the next loop we add boxes one by one */
 		basket = basket_new();
@@ -81,19 +83,19 @@ static int box_new_from_data_test(void)
 
 		/* Iterate all boxes in the basket */
 		for (box_iterator = 0; box_iterator < number_of_boxes; box_iterator++) {
-			DD("[TEST] Going to add a new data into buf[%u], new data size is %zu\n", box_iterator, lorem_ipsum_size);
+			DDD("[TEST] Going to add a new data into buf[%u], new data size is %zu\n", box_iterator, lorem_ipsum_size);
 
-			PR("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ %.4d ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n", box_iterator);
+			PR3("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ %.4d ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n", box_iterator);
 
 			// basket_dump(basket, "box_new_from_data_test: calling box_new_from_data()");
-			DD("[TEST] Going to call box_new_from_data() for box[%u]\n", box_iterator);
+			DDD("[TEST] Going to call box_new_from_data() for box[%u]\n", box_iterator);
 			buf_num = box_new_from_data(basket, lorem_ipsum, lorem_ipsum_size);
 			if (buf_num < 0) {
 				DE("[TEST] Error on adding a buffer into box[%u]\n", box_iterator);
 				abort();
 			}
 
-			DD("[TEST] Going to get data ptr for box [%d]\n", box_iterator);
+			DDD("[TEST] Going to get data ptr for box [%d]\n", box_iterator);
 			internal_data = box_data_ptr(basket, box_iterator);
 			if (NULL == internal_data) {
 				DE("[TEST] Can not get pointer to internal buffer for box[%u]\n", box_iterator);
@@ -114,11 +116,13 @@ static int box_new_from_data_test(void)
 
 		basket_sz = basket_size(basket);
 		basket_release(basket);
-		DD("[TEST] Success: Created, filled, tested and destroyed basket with %u boxes, size was: %d\n",
+		DDD("[TEST] Success: Created, filled, tested and destroyed basket with %u boxes, size was: %d\n",
 		   number_of_boxes, basket_sz);
 
-		PR("\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ %.4d ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n", i);
+		PR3("\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ %.4d ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n", i);
 	}
+
+	PR("[TEST] Success: Intensive 'new box from data()' test\n");
 	return 0;
 }
 /*
@@ -145,7 +149,7 @@ static int box_new_from_data_simple_test(void)
 		abort();
 	}
 
-	PR("\n============================== 1 ========================================\n\n");
+	PR3("\n============================== 1 ========================================\n\n");
 
 	/* Add 1 box */
 	buf_num = box_new_from_data(basket, lorem_ipsum, lorem_ipsum_size);
@@ -154,7 +158,7 @@ static int box_new_from_data_simple_test(void)
 		abort();
 	}
 
-	PR("\n============================== 2 ========================================\n\n");
+	PR3("\n============================== 2 ========================================\n\n");
 
 	/* Add second box */
 	buf_num = box_new_from_data(basket, lorem_ipsum, lorem_ipsum_size);
@@ -163,9 +167,9 @@ static int box_new_from_data_simple_test(void)
 		abort();
 	}
 
-	PR("\n============================== 3 ========================================\n\n");
+	PR3("\n============================== 3 ========================================\n\n");
 
-	DD("[TEST] Going to get data ptr\n");
+	DDD("[TEST] Going to get data ptr\n");
 	internal_data = box_data_ptr(basket, 0);
 	if (NULL == internal_data) {
 		DE("[TEST] Can not get pointer to internal buffer for box %u\n", 0);
@@ -185,8 +189,8 @@ static int box_new_from_data_simple_test(void)
 
 	basket_sz = basket_size(basket);
 	basket_release(basket);
-	DD("[TEST] Success: Created, filled, tested and destroyed basket with %u boxes, size was: %d\n",
-	   1, basket_sz);
+
+	PR("[TEST] Success: Created, filled, tested and destroyed basket with %u boxes, size was: %d\n", 1, basket_sz);
 	return 0;
 }
 
@@ -309,6 +313,8 @@ static void basket_collapse_in_place_test(void)
 		DE("[TEST] Failed basket releasing\n");
 		abort();
 	}
+
+	PR("[TEST] Success: A complex 'collapse all boxes in place' test\n");
 }
 
 void basket_to_buf_test(void)
@@ -330,6 +336,9 @@ void basket_to_buf_test(void)
 		DE("[TEST] Can not create a flat memory buffer from basket\n");
 		abort();
 	}
+
+	DDD("[TEST] Created a flat memory buffer from 'Alice' basket, size of basket = %lu, size of buf %zu, size of Alice text is %zu, overhead of the basket = %zu\n",
+	   basket_size(basket), flat_buf_size, strlen(string_alice_all), flat_buf_size - strlen(string_alice_all));
 
 	basket_2 = basket_from_buf(flat_buf, flat_buf_size);
 	if (NULL == basket_2) {
@@ -353,6 +362,8 @@ void basket_to_buf_test(void)
 		DE("[TEST] Can not release the restored basket\n");
 		abort();
 	}
+
+	PR("[TEST] Success: 'Basket to Flat Memory Buffer' and 'Flat Memory Buffer to Basket' test\n");
 }
 
 int main(void)
