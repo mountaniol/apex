@@ -77,10 +77,12 @@ ztable_t *zcreate_hash_table(void);
  * @func void zfree_hash_table(ztable_t *hash_table)
  * @brief Release hash table.
  * @param ztable_t * hash_table Hash table to free
+ * @param const int force_values_clean If not 0, force releasing
+ *  			the user buffers kept in the ztable 
  * @details If the hash table is not empty, all entries will be released as well.
  *          The data kept in the entries not released
  */
-void zfree_hash_table(ztable_t *hash_table);
+void zfree_hash_table(ztable_t *hash_table, const int force_values_clean);
 
 /* hash operations */
 
@@ -212,7 +214,7 @@ zentry_t *zentry_t_alloc_int(u_int32_t key, void *val);
  * @param bool recursive If this == true, and the entry holds several nodes (i.e. linked list) release all of them
  * @details
  */
-void zentry_t_release(zentry_t *entry, const bool recursive);
+void zentry_t_release(zentry_t *entry, const bool recursive, const int force_values_clean);
 
 /**
  * @author Sebastian Mountaniol (11/3/21)

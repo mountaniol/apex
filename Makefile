@@ -18,7 +18,7 @@ ifneq ($(linker),)
 	LD=$(linker)
 endif
 
-DEBUG=-DDERROR3 -DDEBUG2 -ggdb -DABORT_ON_ERROR #-DDEBUG3 #-DENABLE_BOX_DUMP
+DEBUG=-DDERROR3 -DDEBUG2 -ggdb -DABORT_ON_ERROR -DDEBUG3 #-DENABLE_BOX_DUMP
 #CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DDEBUG3 -I$(MOSQ_INC) -I./ -I./zhash
 #CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DFIFO_DEBUG -DDEBUG3 -I$(MOSQ_INC) -I./ -I./zhash
 CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DFIFO_DEBUG
@@ -46,6 +46,7 @@ all: apex
 
 clean:
 	rm -f $(APEX_O) $(APEX_T) $(BUFT_O) $(BUFT_A) $(BASKET_O) $(BASKET_A) $(BASKET_TEST_O) $(BASKET_TEST_T)
+	rm -f $(ZHASH_TEST_O) $(ZHASH_TEST_T)
 
 apex: $(APEX_O)
 	$(GCC) $(CFLAGS) $(APEX_O) -o $(APEX_T)
