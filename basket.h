@@ -83,21 +83,17 @@ typedef struct {
 
 /*** Getter / Setter functions ***/
 /* We populate these function for test purposes. Should not be used out of test */
-extern box_t *basket_get_box(const basket_t *basket, box_u32_t box_index);
-extern ret_t basket_set_box(basket_t *basket, box_u32_t box_num, box_t *box);
 
 /**
- * @author Sebastian Mountaniol (7/21/22)
- * @brief We often add a box and then use it. So here is the
- *  	  special function to get the last box.
- * @param const basket_t* basket Basket to get the last box from
- * @return buf_t* The last box, can be NULL if not set yet.
- * @details 
+ * @author Sebastian Mountaniol (7/27/22)
+ * @brief Get pointer to a box in the basket
+ * @param const void* basket   Basket to get box from
+ * @param const box_u32_t box_index Box index, the first box is '0' index
+ * @return box_t* Pointer to a box, NULL on an error or if the box is not allocated yet
+ * @details If NULL returned it is not an error. On a critical error this function will call abort().
  */
-//extern buf_t *basket_get_last_box(const basket_t *basket);
+extern void *basket_get_box(const void *basket, const box_u32_t box_index);
 
-// extern buf_s64_t basket_get_boxes_count(const basket_t *basket);
-// extern ret_t basket_set_boxes_count(basket_t *basket, const buf_u32_t number);
 /*** Basket create / release ***/
 
 /**
@@ -106,32 +102,34 @@ extern ret_t basket_set_box(basket_t *basket, box_u32_t box_num, box_t *box);
  * @return ret_t Pointer to a new Basket object on success, NULL on error
  * @details 
  */
-extern basket_t *basket_new(void);
+extern void *basket_new(void);
 
 /**
  * @author Sebastian Mountaniol (7/15/22)
  * @brief Return total size of Mvox object in bytes
- * @param basket_t* basket  Basket to measure
+ * @param const void *basket  Basket to measure
  * @return size_t Size of the Basket object and all buffers in
  *  	   all boxes
  * @details 
  */
-extern size_t basket_size(const basket_t *basket);
+extern size_t basket_size(const void *basket);
 
 /**
  * @author Sebastian Mountaniol (6/12/22)
  * @brief Release the basket_t object and all boxes it holds
- * @param basket_t* basket  The basket object to release
+ * @param void *basket  The basket object to release
  * @return ret_t OK on success, other (negative) value on
  *  	   failure
- * @details This call will release everything
+ * @details This call will release everything - the basket, all
+ *  		boxes in the basket, and all buffers in  the boxes.
+ *  		The whole basket object released completely.
  */
-extern ret_t basket_release(basket_t *basket);
+extern ret_t basket_release(void *basket);
 
 /**
  * @author Sebastian Mountaniol (6/12/22)
  * @brief Remove all boxes from the basket_t object
- * @param basket_t* basket  The basket object to remove boxes
+ * @param void* basket  The basket object to remove boxes
  *  			  from
  * @return ret_t Return OK on success, other (negative) value on
  *  	   an error
@@ -139,29 +137,24 @@ extern ret_t basket_release(basket_t *basket);
  *  		contain 0 boxes. All memory of the boxes will be
  *  		released.
  */
-extern ret_t basket_clean(basket_t *basket);
+extern ret_t basket_clean(void *basket);
 
 /*** Box(es) manipulations ***/
 
 /**
  * @author Sebastian Mountaniol (6/12/22)
- * @brief Add additional box at the end
- * @param basket_t* basket  The basket object to add a new box
- * @return ret_t OK on success
- * @details If you want just save a buffer into a box, use ::box_new() function
- */
-extern ret_t box_add_new(basket_t *basket);
-
-/**
- * @author Sebastian Mountaniol (6/12/22)
  * @brief Insert a new box after the box "after"
- * @param basket_t* basket  The Basket object to insert the new
+ * @param void* basket  The Basket object to insert the new
  *  			  box
- * @param uint32_t* after The index of box after which the new
- *  			  box should be inserted. WARNING: The boxes
+ * @param uint32_t* after_index The index of box after which the new
+ *  			  box should be inserted.<br>
+ *  			  WARNING: The boxes
  *  			  after the box 'after' will be shifted and
  *  			  change their numbers.<br>
  *  			  WARNING: The index of a box starts from '0'
+ * @param const void *buffer - Buffer to copy into the new box.<br>
+ * 				  WARNING: The buffer is copied, it up to caller to release it after the operation.
+ * @param const box_u32_t buffer_size - Size of buffer to copy into the new box
  * @return ret_t OK on success
  * @details If you have a Basket with 5 boxes, and you insert
  *  		a new box after the existing box 3, then box 4
@@ -169,12 +162,12 @@ extern ret_t box_add_new(basket_t *basket);
  *  		means, this operation shifts all boxes after the box
  *  		'after'.
  */
-extern ret_t box_insert_after(basket_t *basket, const uint32_t after);
+extern ret_t box_insert_after(void *basket, const uint32_t after_index, const void *buffer, const box_u32_t buffer_size);
 
 /**
  * @author Sebastian Mountaniol (6/12/22)
  * @brief Swap two boxes
- * @param basket_t* basket  The Basket object to swap boxes
+ * @param void* basket  The Basket object to swap boxes
  * @param buf_u32_t first The first box, after operation it will
  *  			  become the second
  * @param buf_u32_t second The second box to swap, after this
@@ -186,26 +179,25 @@ extern ret_t box_insert_after(basket_t *basket, const uint32_t after);
  *  		to place of box 2, and the previous box 2 will
  *  		become box 4. All other boxes stay untouched.
  */
-extern ret_t box_swap(basket_t *basket, const box_u32_t first, const box_u32_t second);
+extern ret_t box_swap(void *basket, const box_u32_t first_index, const box_u32_t second_index);
 
 /**
  * @author Sebastian Mountaniol (6/12/22)
- * @brief Remove a box. All boxes stay untouched.
- * @param basket_t* basket  The Basket object to remove a box
- *  			  from
- * @param uint32_t num   Number of box to remove
+ * @brief Remove content of one box by box index (starts from
+ *  	  0). All other boxes stay untouched
+ * @param void* basket  The Basket object to clean a box
+ * @param uint32_t num   index of box to clean
  * @return ret_t OK on success
- * @details If you have 5 boxes in the Basket, and you remove
- *  		box number 3, the box 4 stays box 4, the box 5 stays
- *  		box 5. The box 3 after this operation will be an
- *  		empty box.
+ * @details The box won't be removed, just cleaned: its internal
+ *  		buffer removed, and its size will be 0 after this
+ *  		operation. You may reuse this box if you wish.
  */
-extern ret_t box_remove(basket_t *basket, const box_u32_t num);
+extern ret_t box_clean(void *basket, const box_u32_t box_index);
 
 /**
  * @author Sebastian Mountaniol (6/12/22)
  * @brief Merge two boxes into one single box
- * @param basket_t* basket  The Basket object to merge boxes 
+ * @param void* basket  The Basket object to merge boxes 
  * @param buf_u32_t src   Add this "src" box at the tail of
  *  			   "dst" box; then, the "src" box becomes an
  *  			   empty box.
@@ -217,7 +209,7 @@ extern ret_t box_remove(basket_t *basket, const box_u32_t num);
  *  		memory of (2 + 3), the box 3 will be an empty box,
  *  		box 4 and 5 will stay boxes 4 and 5
  */
-extern ret_t box_merge_box(basket_t *basket, const box_u32_t src, const box_u32_t dst);
+extern ret_t box_merge_box(void *basket, const box_u32_t src, const box_u32_t dst);
 
 /**
  * @author Sebastian Mountaniol (6/12/22)
@@ -225,7 +217,7 @@ extern ret_t box_merge_box(basket_t *basket, const box_u32_t src, const box_u32_
  *  	  boxes from this one. The new box will be inserted
  *  	  after the bisected box. WARNING: The boxes after the
  *  	  bisected box are shifted.
- * @param basket_t* basket   The Basket object holding the box
+ * @param void* basket   The Basket object holding the box
  *  			to be bisected
  * @param size_t box_num Box to bisect
  * @param size_t from_offset  The offset in bytes of bisection
@@ -242,12 +234,12 @@ extern ret_t box_merge_box(basket_t *basket, const box_u32_t src, const box_u32_
  *  		previous box 5 becomes box 6. TODO: An diagramm
  *  		should be added to explain it visually.
  */
-extern ret_t box_bisect(basket_t *basket, const box_u32_t box_num, const size_t from_offset);
+extern ret_t box_bisect(void *basket, const box_u32_t box_num, const size_t from_offset);
 
 /**
  * @author Sebastian Mountaniol (6/12/22)
  * @brief Unite (merge) all boxes into one continugeous box
- * @param basket_t* basket  The Basket object to collapse
+ * @param void* basket  The Basket object to collapse
  *  			all boxes into box[0]. WARNING: This operation
  *  			is irreversable. You can not restore boxes after
  *  			them collapsed. If you need a restorable
@@ -261,102 +253,76 @@ extern ret_t box_bisect(basket_t *basket, const box_u32_t box_num, const size_t 
  *  		in tail of the box 0, then added memory of the box
  *  		3 and so on.
  */
-extern ret_t basket_collapse_in_place(basket_t *basket);
+extern ret_t basket_collapse(void *basket);
 
 /**
  * @author Sebastian Mountaniol (6/16/22)
  * @brief Prepare the Basket for sending to another host through
  *  	  a socket.
- * @param basket_t* basket Basket to prepare
- * @return buf_t* The buf_t structure contains the memory buffer
- *  	   to send, and the memory size. The buf_t->room will be
- *  	   equial to buf_t->used, and this is the number of
- *  	   bytes for sending. This buffer can be sent to any
- *  	   other machine, and it will be restored on the other
- *  	   side.
+ * @param void* basket Basket to prepare
+ * @return void* The memory buffer, packed, and ready to send.
+ *  	   This buffer can be sent to any other machine, and it
+ *  	   will be restored on the other side using
+ *  	   ::basket_from_buf() function
  * @details This function creates a restorable memory buffer
  *  		which you can send to another machine. You can
  *  		restore the exact same Basket using
  *  		::basket_from_buf() function. The 'Basket' passed to
  *  		this function not changed and not released.
  */
-void *basket_to_buf(const basket_t *basket, size_t *size);
-
-/**
- * @author Sebastian Mountaniol (7/17/22)
- * @brief Create contignoius buffer containing restorable
- *  	  content of a basket; this basket object can be
- *  	  restored by function
- * @param basket_t* basket  
- * @return buf_t* 
- * @details 
- */
-extern box_t *basket_to_buf_t(basket_t *basket);
+extern void *basket_to_buf(const void *basket, size_t *size);
 
 /**
  * @author Sebastian Mountaniol (7/17/22)
  * @brief Restore Basket object from the regular memory buffer.
  *  	  The buffer should be a result of function
- *  	  ::basket_to_buf() or basket_to_buf_t()
+ *  	  ::basket_to_buf().
  * @param void* buf   The memory containing the buffer from
  *  		  which the Basket object will be restored.
- * @param size_t size  Size of the memory 
- * @return basket_t* The Basket object returned. On error NULL
- *  	   returned.
+ * @param size_t size  Size of the memory passed as 'buf'
+ *  			 pointer
+ * @return void* The Basket object returned. NULL returned on an
+ *  	   error.
  * @details The 'buf' buffer is untouched and not released
  *  		disregarding the success or failure of this
- *  		operation. The caller is own the memory and the
- *  		caller should release it.
+ *  		operation. The caller owns the memory and the caller
+ *  		responsible to release it.
  */
-extern basket_t *basket_from_buf(void *buf, const size_t size);
-
-/**
- * @author Sebastian Mountaniol (6/16/22)
- * @brief Restore the Basket object from a buffer received (for
- *  	  example) by socket from another process / machine
- * @param buf_t* buf   The buf_t structure containing the
- *  		   received memory in buf_t->data, and the received
- *  		   buffer size in the buf_t->used.
- * @return basket_t* Restored Baasket structure. All boxes are
- *  	   restored as they were before it transfered into the
- *  	   buf_t form. Even boxes with 0 bytes memory are
- *  	   restored.
- * @details The buf_t is untouched, disregarding the operation
- *  		success or failure. The caller owns this memory.
- */
-extern basket_t *basket_from_buf_t(const box_t *buf);
+extern void *basket_from_buf(void *buf, const size_t size);
 
 /**
  * @author Sebastian Mountaniol (7/26/22)
  * @brief Compare tow baskets, including box data. 
- * @param basket_t* basket_left The first basket
- * @param basket_t* basket_right The second basket
+ * @param void* basket_left The first basket
+ * @param void* basket_right The second basket
  * @return int 0 if two baskets are equal, 1 if if they are
  *  	   differ from each other, -1 on an error
- * @details 
+ * @details The baskets passed to this function are basket
+ *  		objects, and not result of ::basket_to_buf()
+ *  		function.
  */
-extern int basket_compare_basket(basket_t *basket_left, basket_t *basket_right);
+extern int basket_compare_basket(const void *basket_right, const void *basket_left);
 
 /*** A single sector operation - add, remove, modifu sector's memory ***/
 
 /**
  * @author Sebastian Mountaniol (7/11/22)
  * @brief Create a new box and put the buffer into the box
- * @param basket_t* basket       Basket to add buffer to
- * @param void* buffer     Buffer to add
- * @param size_t buffer_size Size of the buffer 
+ * @param void* basket       Basket to add a new box
+ * @param void* buffer     	 Buffer to add into the new box
+ * @param size_t buffer_size Size of the buffer to add to new box
  * @return ret_t The number of created box on success, which is 0 or more.
  * A negative value on failure.
  * @details The new box will have sequentional number. If you already have 5 boxes,
  * the newely created box will have index "5," means it will be the sixts box. The boxes index starts from 0.
  */
-extern ssize_t box_new_from_data(basket_t *basket, const void *buffer, const box_u32_t buffer_size);
+extern ssize_t box_new(void *basket, const void *buffer, const box_u32_t buffer_size);
 
 /**
  * @author Sebastian Mountaniol (7/12/22)
  * @brief Copy the memory buffer into the tail of the "box_num"
  *  	  internal buffer
- * @param basket_t* basket       	Basket containing the box
+ * @param void* basket       	Basket containing the box
  * @param size_t box_num    		Box number to add the buffer
  * @param void* buffer     		Buffer to copy
  * @param size_t buffer_size 	Buffer size to copy
@@ -367,14 +333,14 @@ extern ssize_t box_new_from_data(basket_t *basket, const void *buffer, const box
  *  		after this operation the box 1 will contain "Blue
  *  		car and yellow bike"
  */
-extern ret_t box_add_to_tail(basket_t *basket, const box_u32_t box_num, const void *buffer, const size_t buffer_size);
+extern ret_t box_add(void *basket, const box_u32_t box_num, const void *buffer, const size_t buffer_size);
 
 /**
  * @author Sebastian Mountaniol (7/12/22)
  * @brief Remove everything from a box, and set a new memory
  *  	  buffer into it. It is the same as call to
  *  	  ::box_remove() and then to ::box_add_to_tale()
- * @param basket_t* basket       Basket object
+ * @param void* basket       Basket object
  * @param size_t box_num        Box number to replace memory
  *  		  with the new buffer
  * @param void* buffer     The new buffer to set into the buffer
@@ -385,14 +351,14 @@ extern ret_t box_add_to_tail(basket_t *basket, const box_u32_t box_num, const vo
  *  		data. THe original 'buffer' is unouched and it is up
  *  		to caller to release it.
  */
-extern ret_t box_replace_data(basket_t *basket, const box_u32_t box_num, const void *buffer, const size_t buffer_size);
+extern ret_t box_data_replace(void *basket, const box_u32_t box_num, const void *buffer, const size_t buffer_size);
 
 /**
  * @author Sebastian Mountaniol (7/12/22)
  * @brief This function returns a pointer to internal buffer of
  *  	  the box. You can use the internal buffer without
  *  	  copying it.
- * @param basket_t* basket   Basket containing a box
+ * @param void* basket   Basket containing a box
  * @param size_t box_num Number of box you want to use
  * @return vois * - Pointer to internal buffer 
  * @details Use function ::mbox_box_size() to get size of this
@@ -400,12 +366,12 @@ extern ret_t box_replace_data(basket_t *basket, const box_u32_t box_num, const v
  *  		WARNING: Do not release this memory! You do not own
  *  		it! If you do, the basket_release will fail.
  */
-extern void *box_data_ptr(const basket_t *basket, const box_u32_t box_num);
+extern void *box_data_ptr(const void *basket, const box_u32_t box_num);
 
 /**
  * @author Sebastian Mountaniol (7/12/22)
  * @brief Returns size in bytes of the buffer in "box_num" box
- * @param basket_t* basket   Basket object containing the asked
+ * @param void* basket   Basket object containing the asked
  *  			  box
  * @param size_t box_num Number of box to measure the memory
  *  			 size
@@ -414,36 +380,29 @@ extern void *box_data_ptr(const basket_t *basket, const box_u32_t box_num);
  * @details You probably need this function when use
  *  		::box_data_ptr() function
  */
-extern ssize_t box_data_size(const basket_t *basket, const box_u32_t box_num);
+extern ssize_t box_data_size(const void *basket, const box_u32_t box_num);
 
 /**
  * @author Sebastian Mountaniol (7/12/22)
  * @brief Free memory in the given box. The box is not deleted,
  *  	  just becones empty.
- * @param basket_t* basket  Basket object containing the box
+ * @param void* basket  Basket object containing the box
  * @param size_t box_num Box number to free memory
  * @return ret_t OK on success, a negative error on failure
  * @details 
  */
-extern ret_t box_data_free(basket_t *basket, const box_u32_t box_num);
+extern ret_t box_data_free(void *basket, const box_u32_t box_num);
 
 /**
  * @author Sebastian Mountaniol (7/14/22)
  * @brief "Steal" the memory buffer from a box
- * @param basket_t* basket   Basket object 
+ * @param void* basket   Basket object 
  * @param size_t box_num    Number of box to steal memory buffer
  *  		  from
  * @return void* Memory buffer address. NULL if the box is empty
  *  	   or on an error
  * @details 
  */
-extern void *box_steal_data(basket_t *basket, const box_u32_t box_num);
+extern void *box_steal_data(void *_basket, const box_u32_t box_num);
 
-/**
- * @author Sebastian Mountaniol (7/19/22)
- * @brief For debug: print basket status / metrics / pointers
- * @param basket_t* basket
- * @details 
- */
-extern void basket_dump(basket_t *basket, const char *msg);
 #endif /* BASKET_H_ */

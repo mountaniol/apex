@@ -32,7 +32,7 @@
  * The function above: Frequently used (HOT) , does not change external memory (PURE),
  * for the same input buffers it returns the same predictable result (the change of buffers is traced automatically) (PURE),
  * both arguments are not NULL pointers (NONULL(1,2)),
- * and the returned value of this function must be used (at least tested) (WARN_UNUSED)RET).
+ * and the returned value of this function must be used (at least tested) (WARN_UNUSED_RET).
  */
 
 /* This function is hot, used intensively */

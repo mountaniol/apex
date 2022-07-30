@@ -1,6 +1,9 @@
 #ifndef ZHASH_H
 #define ZHASH_H
 
+#include <sys/types.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <stdbool.h>
 
 /* hash table
@@ -10,27 +13,54 @@
 #define COUNT_OF(arr) (sizeof(arr) / sizeof(*arr))
 #define zfree free
 
-/* struct representing an entry in the hash table */
-struct ZHashEntry {
-	/* If key is a string, the 'key' will be != NULL */
-	char *key;
-	/* If the key is integer, then key_int set and 'key' == NULL */
-	u_int32_t key_int;
-	void *val;
-	struct ZHashEntry *next;
-};
+/* Used for Murmur calculation */
+#define ZHASH_SEED (17)
 
-typedef struct ZHashEntry zentry_t;
+typedef struct {
+	char *key_str; /**< String key representation */
+	uint32_t key_str_len; /**< Length of the key string */
+	uint32_t key_int; /**< The integer calculated from the key string */
+} zkey_t;
+
+typedef struct {
+	void *val; /**< value */
+	uint32_t val_size; /**< Size of the buffer pointer by val */
+} val_t;
+
+/* struct representing an entry in the hash table */
+typedef struct ZHashEntry{
+	zkey_t Key;
+	val_t Val;
+	struct ZHashEntry *next; /* The next entry */
+} zentry_t;
 
 /* struct representing the hash table
   size_index is an index into the hash_sizes array in hash.c */
-struct ZHashTable {
-	size_t size_index;
-	size_t entry_count;
+typedef struct {
+	uint32_t size_index;
+	uint32_t entry_count;
 	zentry_t **entries;
-};
+} ztable_t; 
 
-typedef struct ZHashTable ztable_t;
+
+/* The structures and macros below we need to create a flat dump of the zhash*/
+#define ZHASH_WATERMARK (0xFAFA7777)
+#define ZENTRY_WATERMARK (0x898AE990)
+
+typedef struct {
+	uint32_t watemark;
+	uint32_t checksum;
+	// uint32_t size_index;
+	uint32_t entry_count;
+} __attribute__((packed)) zhash_header_t;
+
+typedef struct {
+	uint32_t watemark; /**< Predefined value, for validation */
+	uint32_t checksum; /**< Checksum of this entry, not implemented yet*/
+	uint32_t key_int; /**< Key: integer */
+	uint32_t key_len; /**< Length of the 'char *key', not includes terminating \0 */
+	uint32_t val_len; /**< Length of the entry */
+} __attribute__((packed)) zhash_entry_t;
 
 /**
  * @author Sebastian Mountaniol (23/08/2020)
@@ -61,12 +91,17 @@ void zfree_hash_table(ztable_t *hash_table);
  * @func void zhash_insert_by_str(ztable_t *hash_table, char *key, void *val)
  * @brief Insert new entry into the hash table. The key is string.
  * @param ztable_t * hash_table A hash table to insert the new entry into
- * @param char * key The key to used for insert / search
- * @param void * val Pointer to data
+ * @param const char * key The key to used for insert / search
+ * @param const size_t key_len - Length of the key
+ * @param const void * val Pointer to data
+ * @param const size_t val_len - Length of the buffer pointed by 'val'
  * @details
  */
-void zhash_insert_by_str(ztable_t *hash_table, const char *key, void *val);
-
+void zhash_insert_by_str(ztable_t *hash_table,
+						 char *key_str,
+						 const size_t key_str_len,
+						 void *val,
+						 const size_t val_size);
 /**
  * @author Sebastian Mountaniol (23/08/2020)
  * @func void* zhash_find_by_str(ztable_t *hash_table, char *key)
@@ -87,7 +122,7 @@ void *zhash_find_by_str(ztable_t *hash_table, char *key);
  * @return void* Data kept in hash table, NULL if not found
  * @details This function removes the found entry from the hash and returns data to caller
  */
-void *zhash_extract_by_str(ztable_t *hash_table, char *key);
+void *zhash_extract_by_str(ztable_t *hash_table, const char *key);
 
 /**
  * @author Sebastian Mountaniol (23/08/2020)
@@ -111,7 +146,7 @@ bool zhash_exists_by_str(ztable_t *hash_table, const char *key);
  * @param void * val Pointer to data
  * @details
  */
-void zhash_insert_by_int(ztable_t *hash_table, u_int32_t key, void *val);
+void zhash_insert_by_int(ztable_t *hash_table, u_int32_t int_key, void *val, size_t val_size);
 
 /**
  * @author Sebastian Mountaniol (23/08/2020)
@@ -133,7 +168,7 @@ void *zhash_find_by_int(ztable_t *hash_table, u_int32_t key);
  * @return void* Data kept in hash table, NULL if not found
  * @details This function removes the found entry from the hash and returns data to caller
  */
-void *zhash_extract_by_int(ztable_t *hash_table, u_int32_t key);
+void *zhash_extract_by_int(ztable_t *hash_table, const u_int32_t key);
 
 /**
  * @author Sebastian Mountaniol (23/08/2020)
@@ -144,7 +179,7 @@ void *zhash_extract_by_int(ztable_t *hash_table, u_int32_t key);
  * @return bool True if the a record for the given key presens, false if doesnt
  * @details
  */
-bool zhash_exists_by_int(ztable_t *hash_table, u_int32_t key);
+bool zhash_exists_by_int(const ztable_t *hash_table, const u_int32_t key);
 
 /* hash entry creation and destruction */
 
@@ -157,7 +192,7 @@ bool zhash_exists_by_int(ztable_t *hash_table, u_int32_t key);
  * @return zentry_t* Pointer to a new zenty_t structure on success, NULL on error
  * @details
  */
-zentry_t *zentry_t_alloc_str(const char *key, void *val);
+zentry_t *zentry_t_alloc_str(const char *key, const size_t key_len, void *val, const size_t val_size);
 /**
  * @author Sebastian Mountaniol (23/08/2020)
  * @func zentry_t *zentry_t_alloc_int(u_int32_t key, void *val)
@@ -177,7 +212,7 @@ zentry_t *zentry_t_alloc_int(u_int32_t key, void *val);
  * @param bool recursive If this == true, and the entry holds several nodes (i.e. linked list) release all of them
  * @details
  */
-void zentry_t_release(zentry_t *entry, bool recursive);
+void zentry_t_release(zentry_t *entry, const bool recursive);
 
 /**
  * @author Sebastian Mountaniol (11/3/21)
@@ -195,6 +230,35 @@ void zentry_t_release(zentry_t *entry, bool recursive);
  * @details Be careful! This function return zentry_t! You
  *  				should use entry->val to get the value saved in hash
  */
-zentry_t *zhash_list(ztable_t *hash_table, size_t *index, zentry_t *entry);
+zentry_t *zhash_list(const ztable_t *hash_table, size_t *index, const zentry_t *entry);
+
+/**
+ * @author Sebastian Mountaniol (7/27/22)
+ * @brief Create a flat buffer from the zhash table. You can
+ *  	  restore zhash from this memory buffer with function
+ *  	  ::zhash_from_buf()
+ * @param ztable_t* hash_table Hash to dump into memory buffer
+ * @param size_t* size  The size of resulting buffer will be
+ *  			returned in this variable
+ * @return void* Poiter to the new buffer. In case of error a
+ *  	   NULL returned.
+ * @details The original zhash not affected by this operation,
+ *  		you can use it or release it, by your choice.
+ */
+extern void *zhash_to_buf(const ztable_t *hash_table, size_t *size);
+
+/**
+ * @author Sebastian Mountaniol (7/27/22)
+ * @brief Create zhash table from the flat memory buffer. The
+ *  	  flat memory buffer must be a result of
+ *  	  ::zhash_to_buf() function
+ * @param void* buf   Flat memory buffer containing a dump of
+ *  		  zhash table
+ * @param size_t size  Size of the flat memory buffer
+ * @return ztable_t* zhash object, restored from the buffer.
+ *  	   NULL on an error.
+ * @details 
+ */
+extern ztable_t *zhash_from_buf(const char *buf, const size_t size);
 #endif
 

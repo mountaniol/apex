@@ -18,10 +18,13 @@ ifneq ($(linker),)
 	LD=$(linker)
 endif
 
-DEBUG=-DDERROR3 -DDEBUG2 -ggdb -DABORT_ON_ERROR #-DENABLE_BOX_DUMP
+DEBUG=-DDERROR3 -DDEBUG2 -ggdb -DABORT_ON_ERROR #-DDEBUG3 #-DENABLE_BOX_DUMP
 #CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DDEBUG3 -I$(MOSQ_INC) -I./ -I./zhash
 #CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DFIFO_DEBUG -DDEBUG3 -I$(MOSQ_INC) -I./ -I./zhash
 CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DFIFO_DEBUG
+
+ZHASH_O=zhash2.o murmur3.o
+ZHASH_A=zhash2.a
 
 BUFT_O=box_t.o box_t_memory.o
 BUFT_A=box_t.a
@@ -47,6 +50,9 @@ apex: $(APEX_O)
 
 buft: $(BUFT_O) # compile buf_t and build archive
 	ar rcs $(BUFT_A) $(BUFT_O)
+
+zhash: $(ZHASH_O) # compile buf_t and build archive
+	ar rcs $(ZHASH_A) $(ZHASH_O)
 
 basket: $(BUFT_O) $(BASKET_O) # compile buf_t and build archive
 	ar rcs $(BASKET_A) $(BUFT_O) $(BASKET_O)

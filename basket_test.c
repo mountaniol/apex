@@ -63,7 +63,10 @@ static int box_new_from_data_test(void)
 	ssize_t   buf_num;
 	char      *internal_data;
 	box_s64_t lorem_ipsum_size  = (box_s64_t)strnlen(lorem_ipsum, 4096);
+	#ifdef DEBUG3
+	/* We need this variable only if extended debug is ON */
 	int       basket_sz;
+	#endif /* DEBUG3 */
 
 	/* Iterate array boxes_in_test[], and use each value of this array as a number of boxes in basket */
 	for (i = 0; i < number_of_tests; i++) {
@@ -89,7 +92,7 @@ static int box_new_from_data_test(void)
 
 			// basket_dump(basket, "box_new_from_data_test: calling box_new_from_data()");
 			DDD("[TEST] Going to call box_new_from_data() for box[%u]\n", box_iterator);
-			buf_num = box_new_from_data(basket, lorem_ipsum, lorem_ipsum_size);
+			buf_num = box_new(basket, lorem_ipsum, lorem_ipsum_size);
 			if (buf_num < 0) {
 				DE("[TEST] Error on adding a buffer into box[%u]\n", box_iterator);
 				abort();
@@ -114,10 +117,14 @@ static int box_new_from_data_test(void)
 			}
 		}
 
+
+		#ifdef DEBUG3
 		basket_sz = basket_size(basket);
+		#endif /* DEBUG3 */
+
 		basket_release(basket);
 		DDD("[TEST] Success: Created, filled, tested and destroyed basket with %u boxes, size was: %d\n",
-		   number_of_boxes, basket_sz);
+			number_of_boxes, basket_sz);
 
 		PR3("\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ %.4d ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n", i);
 	}
@@ -152,7 +159,7 @@ static int box_new_from_data_simple_test(void)
 	PR3("\n============================== 1 ========================================\n\n");
 
 	/* Add 1 box */
-	buf_num = box_new_from_data(basket, lorem_ipsum, lorem_ipsum_size);
+	buf_num = box_new(basket, lorem_ipsum, lorem_ipsum_size);
 	if (buf_num < 0) {
 		DE("[TEST] Error on adding a buffer into Basket\n");
 		abort();
@@ -161,7 +168,7 @@ static int box_new_from_data_simple_test(void)
 	PR3("\n============================== 2 ========================================\n\n");
 
 	/* Add second box */
-	buf_num = box_new_from_data(basket, lorem_ipsum, lorem_ipsum_size);
+	buf_num = box_new(basket, lorem_ipsum, lorem_ipsum_size);
 	if (buf_num < 0) {
 		DE("[TEST] Error on adding a buffer into Basket\n");
 		abort();
@@ -202,7 +209,7 @@ static int box_data_insert_and_validate(basket_t *basket, const box_u32_t box_nu
 	TESTP(basket, -1);
 	TESTP(data, -1);
 
-	rc = box_new_from_data(basket, data, data_len);
+	rc = box_new(basket, data, data_len);
 	if (rc < 0) {
 		DE("[TEST] Failed adding a string to a box\n");
 		abort();
@@ -292,7 +299,7 @@ static void basket_collapse_in_place_test(void)
 		abort();
 	}
 
-	rc = basket_collapse_in_place(basket);
+	rc = basket_collapse(basket);
 	if (OK != rc) {
 		DE("[TEST] Failed basket collapsing in place\n");
 		abort();
@@ -320,8 +327,8 @@ static void basket_collapse_in_place_test(void)
 void basket_to_buf_test(void)
 {
 	ret_t    rc;
-	basket_t *basket        = NULL;
-	basket_t *basket_2        = NULL;
+	basket_t *basket       = NULL;
+	basket_t *basket_2     = NULL;
 	char     *flat_buf;
 	size_t   flat_buf_size;
 
@@ -338,7 +345,7 @@ void basket_to_buf_test(void)
 	}
 
 	DDD("[TEST] Created a flat memory buffer from 'Alice' basket, size of basket = %lu, size of buf %zu, size of Alice text is %zu, overhead of the basket = %zu\n",
-	   basket_size(basket), flat_buf_size, strlen(string_alice_all), flat_buf_size - strlen(string_alice_all));
+		basket_size(basket), flat_buf_size, strlen(string_alice_all), flat_buf_size - strlen(string_alice_all));
 
 	basket_2 = basket_from_buf(flat_buf, flat_buf_size);
 	if (NULL == basket_2) {
@@ -346,7 +353,9 @@ void basket_to_buf_test(void)
 		abort();
 	}
 
-	if(basket_compare_basket(basket, basket_2)) {
+	free(flat_buf);
+
+	if (basket_compare_basket(basket, basket_2)) {
 		DE("[TEST] Original basket and the restored basket are not the same\n");
 		abort();
 	}
