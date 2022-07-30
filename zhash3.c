@@ -3,7 +3,7 @@
 
 #include "debug.h"
 #include "tests.h"
-#include "zhash2.h"
+#include "zhash3.h"
 #include "murmur3.h"
 
 /* possible sizes for hash table; must be prime numbers */

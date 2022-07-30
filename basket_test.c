@@ -25,7 +25,7 @@ static basket_t *basket_new_test(void)
 
 	/* Check that mbox is allocated */
 	if (NULL == basket) {
-		DE("Failed allocate basket\n");
+		DE("[TEST] Failed allocate basket\n");
 		abort();
 	}
 

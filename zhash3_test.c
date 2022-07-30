@@ -1,4 +1,6 @@
 #include "zhash3.h"
+#include "debug.h"
+#include "tests.h"
 
 /* Create and release an empty zhash table */
 void basic_test(void)

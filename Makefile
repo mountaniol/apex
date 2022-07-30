@@ -23,8 +23,11 @@ DEBUG=-DDERROR3 -DDEBUG2 -ggdb -DABORT_ON_ERROR #-DDEBUG3 #-DENABLE_BOX_DUMP
 #CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DFIFO_DEBUG -DDEBUG3 -I$(MOSQ_INC) -I./ -I./zhash
 CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DFIFO_DEBUG
 
-ZHASH_O=zhash2.o murmur3.o
-ZHASH_A=zhash2.a
+ZHASH_O=zhash3.o murmur3.o
+ZHASH_A=zhash3.a
+
+ZHASH_TEST_O= zhash3_test.o $(ZHASH_O)
+ZHASH_TEST_T=zhash3_test.out
 
 BUFT_O=box_t.o box_t_memory.o
 BUFT_A=box_t.a
@@ -59,6 +62,9 @@ basket: $(BUFT_O) $(BASKET_O) # compile buf_t and build archive
 
 test_basket: $(BASKET_TEST_O) # compile buf_t and build archive
 	$(GCC) $(CFLAGS) $(BASKET_TEST_O) -o $(BASKET_TEST_T)
+
+test_zhash: $(ZHASH_TEST_O) # compile buf_t and build archive
+	$(GCC) $(CFLAGS) $(ZHASH_TEST_O) -o $(ZHASH_TEST_T)
 
 %.o:%.c
 	@echo "|>" $@...
