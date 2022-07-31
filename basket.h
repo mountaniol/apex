@@ -64,6 +64,7 @@
 
 typedef struct {
 	void **boxes; /**< Array of buf_t structs */
+	uint64_t ticket; /**< Ticket is for free use. End use can put here whatever she/he wants. */
 	box_u32_t boxes_used; /**< Number of bufs in the array */
 	box_u32_t boxes_allocated; /**< For internal use: how many buf_t pointers are allocated in the 'bufs' */
 } basket_t;
@@ -74,8 +75,9 @@ typedef struct {
 	uint32_t box_checksum; /**< The checksum of box buffer, means ::box_dump field; This field is optional, and ignored if == 0 */
 } __attribute__((packed)) box_dump_t;
 
-typedef struct {
+	typedef struct {
 	uint32_t watermark; /**< Watermark: filled with a predefined pattern WATERMARK_BASKET */
+	uint64_t ticket; /**< The same as ticket in ::basket_t, for free use */
 	uint32_t total_len; /**< Total length of this buffer, including 'total_len' field */
 	uint32_t boxes_num; /**< Number of Boxed in this buffer */
 	uint32_t basket_checksum; /**< The checksum of box buffer, means ::box_dump field; This field is optional, and ignored if == 0 */
@@ -92,7 +94,7 @@ typedef struct {
  * @return box_t* Pointer to a box, NULL on an error or if the box is not allocated yet
  * @details If NULL returned it is not an error. On a critical error this function will call abort().
  */
-extern void *basket_get_box(const void *basket, const box_u32_t box_index);
+	extern void *basket_get_box(const void *basket, const box_u32_t box_index);
 
 /*** Basket create / release ***/
 
