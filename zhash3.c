@@ -41,7 +41,6 @@ static void *zcalloc(const size_t num, const size_t size)
 	return (ptr);
 }
 
-
 static ztable_t *zcreate_hash_table_with_size(const size_t size_index)
 {
 	ztable_t *hash_table;
@@ -56,42 +55,37 @@ static ztable_t *zcreate_hash_table_with_size(const size_t size_index)
 
 /**
  * @author Sebastian Mountaniol (7/28/22)
- * @brief Generate int hash from the string 
- * @param const char* key   String
- * @param const size_t len   String length
- * @return uint32_t Calculated hash
+ * @brief Generate integer key (hash) from the string 
+ * @param const char* key_str   String
+ * @param const size_t key_str_len   String length
+ * @return uint64_t Calculated hash (key value)
  * @details 
  */
 
-static uint32_t zgenerate_int_hash_from_str(const char *key, const size_t len)
+static uint64_t zhash_key_int64_from_key_str(const char *key_str, const size_t key_str_len)
 {
-	uint32_t hash = 0;
-	if (NULL == key || 0 == len) {
+	uint64_t key_int64 = 0;
+	if (NULL == key_str || 0 == key_str_len) {
+		DE("Wrong arguments: key_str = %p, key_str_len = %zu\n", key_str, key_str_len);
 		abort();
 	}
-	MurmurHash3_x86_32(key, len, ZHASH_SEED, &hash);
-	return hash;
+	MurmurHash3_x86_128_to_64(key_str, key_str_len, ZHASH_MURMUR_SEED, &key_int64);
+	return key_int64;
 }
 
-static size_t zgenerate_hash_by_str(const ztable_t *hash_table, const char *key)
-{
-	size_t size;
-	size_t hash;
-	char   ch;
-
-	size = hash_sizes[hash_table->size_index];
-	hash = 0;
-
-	while ((ch = *key++)) hash = (17 * hash + ch) % size;
-
-	return (hash);
-}
-
-/* */
-static size_t zgenerate_hash_by_int(const ztable_t *hash_table, const u_int32_t key)
+/**
+ * @author Sebastian Mountaniol (7/31/22)
+ * @brief Generate hash, means: index in zhash->entries array
+ * @param const ztable_t* hash_table Pointer to hash table
+ *  			struct
+ * @param const uint64_t key_int64 Integer key
+ * @return size_t Hash, the array index in zhash->entries
+ * @details 
+ */
+static size_t zgenerate_hash_by_key_int64(const ztable_t *hash_table, const uint64_t key_int64)
 {
 	const size_t size = hash_sizes[hash_table->size_index];
-	return (key % size);
+	return (key_int64 % size);
 }
 
 /**
@@ -122,15 +116,7 @@ static void zhash_rehash(ztable_t *hash_table, const size_t size_index)
 		entry = entries[ii];
 		while (entry) {
 			zentry_t *next_entry;
-
-#if 0 /* SEB */
-			if (entry->Key.key){
-				hash = zgenerate_hash_by_str(hash_table, entry->Key.key);
-			} else {
-				hash = zgenerate_hash_by_int(hash_table, entry->Key.key_int);
-			}
-#endif
-			hash = zgenerate_hash_by_int(hash_table, entry->Key.key_int);
+			hash = zgenerate_hash_by_key_int64(hash_table, entry->Key.key_int64);
 			next_entry = entry->next;
 			entry->next = hash_table->entries[hash];
 			hash_table->entries[hash] = entry;
@@ -144,25 +130,25 @@ static void zhash_rehash(ztable_t *hash_table, const size_t size_index)
 /**
  * @author Sebastian Mountaniol (7/29/22)
  * @brief Fill zentry structure 
- * @param zentry_t* entry      Strucute to fill
- * @param u_int32_t key        Integer key, must be calculated
- *  				before this call
- * @param void* val        Value to keep in the entry
- * @param const size_t val_size   Size (in bytes) of the value
- *  			to keep
- * @param char* key_str    String key; can by NULL
- * @param const size_t key_str_len	Size of the string key. No
- *  			includes \0 terminator, i.e. equal to
- *  			strlen(ket_str)
+ * @param zentry_t* entry      	Structure to fill
+ * @param uint64_t key_int64    Integer key, must be
+ *  				calculated before this call
+ * @param void* val        		Value to keep in the entry
+ * @param const size_t val_size Size (in bytes) of the value to
+ *  			keep
+ * @param char* key_str    		String key; can by NULL
+ * @param const size_t key_str_len	Size (length) of the string
+ *  			key. No includes \0 terminator, i.e. equal to
+ *  			strlen(key_str)
  * @details 
  */
-static void zentry_t_fill(zentry_t *entry, u_int32_t key,
+static void zentry_t_fill(zentry_t *entry, uint64_t key_int64,
 						  void *val,
 						  const size_t val_size,
 						  char *key_str,
 						  const size_t key_str_len)
 {
-	entry->Key.key_int = key;
+	entry->Key.key_int64 = key_int64;
 	entry->Key.key_str = key_str;
 	entry->Key.key_str_len = key_str_len;
 	entry->Val.val = val;
@@ -170,15 +156,40 @@ static void zentry_t_fill(zentry_t *entry, u_int32_t key,
 	entry->next = NULL;
 }
 
+static zentry_t *zentry_t_alloc(uint64_t key_int64, void *val, size_t val_size, char *key_str, size_t key_str_len)
+{
+	zentry_t *entry = zmalloc(sizeof(zentry_t));
+	zentry_t_fill(entry, key_int64, val, val_size, key_str, key_str_len);
+	return (entry);
+}
+
+static void zentry_t_release(zentry_t *entry, const bool recursive, const int force_values_clean)
+{
+	if (recursive && entry->next) zentry_t_release(entry->next, recursive, force_values_clean);
+
+	if (NULL != entry->Key.key_str) {
+		DDD("Going to release entry: %p\n", entry);
+		DDD("Going to release entry->Key.key_str: %p\n", entry->Key.key_str);
+		zfree(entry->Key.key_str);
+		entry->Key.key_str = NULL;
+
+		/* If asked to clean the values kept in the ztable: */
+		if (force_values_clean && NULL != entry->Val.val) {
+			zfree(entry->Val.val);
+		}
+	}
+
+	zfree(entry);
+}
+
 /*** END OF STATIC FUNCTIONS ***/
 
-
-ztable_t *zcreate_hash_table(void)
+ztable_t *zhash_table_allocate(void)
 {
 	return (zcreate_hash_table_with_size(0));
 }
 
-void zfree_hash_table(ztable_t *hash_table, const int force_values_clean)
+void zhash_table_release(ztable_t *hash_table, const int force_values_clean)
 {
 	size_t size;
 	size_t ii;
@@ -198,36 +209,30 @@ void zfree_hash_table(ztable_t *hash_table, const int force_values_clean)
 	zfree(hash_table);
 }
 
-static zentry_t *zentry_t_alloc(u_int32_t key, void *val, size_t val_size, char *key_str, size_t key_str_len)
-{
-	zentry_t *entry = zmalloc(sizeof(zentry_t));
-	zentry_t_fill(entry, key, val, val_size, key_str, key_str_len);
-	return (entry);
-}
-
 /* Internal generic insert. Except all values for an entry. ALways insert by ineger key */
-static void zhash_insert(ztable_t *hash_table,
-						 u_int32_t key_int,
-						 char *key_str,
-						 const size_t key_str_len,
-						 void *val,
-						 const size_t val_size)
+static int zhash_insert(ztable_t *hash_table,
+						uint64_t key_int64,
+						char *key_str,
+						const size_t key_str_len,
+						void *val,
+						const size_t val_size)
 {
 	size_t       size;
 	zentry_t     *entry;
-	const size_t hash   = zgenerate_hash_by_int(hash_table, key_int);
+	const size_t hash   = zgenerate_hash_by_key_int64(hash_table, key_int64);
 	entry = hash_table->entries[hash];
 
 	while (entry) {
 		/* If existing such an entry, replace its content */
-		if (key_int == entry->Key.key_int) {
-			zentry_t_fill(entry, key_int, val, val_size, key_str, key_str_len);
-			return;
+		if (key_int64 == entry->Key.key_int64) {
+			DD("Replacing an item: old key %s / %lX, new %s / %lX\n", entry->Key.key_str, entry->Key.key_int64, key_str, key_int64);
+			zentry_t_fill(entry, key_int64, val, val_size, key_str, key_str_len);
+			return 1;
 		}
 		entry = entry->next;
 	}
 
-	entry = zentry_t_alloc(key_int, val, val_size, key_str, key_str_len);
+	entry = zentry_t_alloc(key_int64, val, val_size, key_str, key_str_len);
 
 	entry->next = hash_table->entries[hash];
 	hash_table->entries[hash] = entry;
@@ -238,75 +243,64 @@ static void zhash_insert(ztable_t *hash_table,
 	if (hash_table->entry_count > size / 2) {
 		zhash_rehash(hash_table, next_size_index(hash_table->size_index));
 	}
+	return 0;
 }
 
-void zhash_insert_by_int(ztable_t *hash_table, u_int32_t int_key, void *val, size_t val_size)
+int zhash_insert_by_int(ztable_t *hash_table, uint64_t int_key, void *val, size_t val_size)
 {
-	zhash_insert(hash_table, int_key, NULL, 0, val, val_size);
+	return zhash_insert(hash_table, int_key, NULL, 0, val, val_size);
 }
 
-void zhash_insert_by_str(ztable_t *hash_table,
-						 char *key_str,
-						 const size_t key_str_len,
-						 void *val,
-						 const size_t val_size)
+int zhash_insert_by_str(ztable_t *hash_table,
+						char *key_str,
+						const size_t key_str_len,
+						void *val,
+						const size_t val_size)
 {
-	char *key_str_copy;
-	uint32_t key_int = zgenerate_int_hash_from_str(key_str, key_str_len);
+	char     *key_str_copy;
+	uint64_t key_int       = zhash_key_int64_from_key_str(key_str, key_str_len);
 	DDD("Calculated key_int: %X\n", key_int);
 	key_str_copy = strndup(key_str, key_str_len);
 	if (NULL == key_str_copy) {
 		DE("Could not duplicate string key");
+		abort();
 	}
-	zhash_insert(hash_table, key_int, key_str_copy, key_str_len, val, val_size);
+	return zhash_insert(hash_table, key_int, key_str_copy, key_str_len, val, val_size);
 }
 
-#if 0 /* SEB */
-/* TODO: Convert string to int and search by  int */
-void *zhash_find_by_str_old(ztable_t *hash_table, char *key){
-	zentry_t     *entry;
-	const size_t hash   = zgenerate_hash_by_str(hash_table, key);
-	entry = hash_table->entries[hash];
-
-	while (entry && strcmp(key, entry->Key.key_str) != 0) entry = entry->next;
-
-	return (entry ? entry->Val.val : NULL);
-}
-#endif
-
-void *zhash_find_by_int(ztable_t *hash_table, u_int32_t key)
+void *zhash_find_by_int(ztable_t *hash_table, uint64_t key_int64)
 {
 	zentry_t     *entry;
-	const size_t hash   = zgenerate_hash_by_int(hash_table, key);
+	const size_t hash   = zgenerate_hash_by_key_int64(hash_table, key_int64);
 	entry = hash_table->entries[hash];
 
-	while (entry && (key != entry->Key.key_int)) entry = entry->next;
+	while (entry && (key_int64 != entry->Key.key_int64)) entry = entry->next;
 
 	return (entry ? entry->Val.val : NULL);
 }
 
 /* TODO: Convert string to int and search by  int */
-void *zhash_find_by_str(ztable_t *hash_table, char *key_str)
+void *zhash_find_by_str(ztable_t *hash_table, char *key_str, const size_t key_str_len)
 {
-	uint32_t key_int = zgenerate_int_hash_from_str(key_str, strnlen(key_str, 1024));
-	DDD("Calculated key_int: %X\n", key_int);
-	return zhash_find_by_int(hash_table, key_int);
+	uint64_t key_int64 = zhash_key_int64_from_key_str(key_str, key_str_len);
+	DDD("Calculated key_int: %X\n", key_int64);
+	return zhash_find_by_int(hash_table, key_int64);
 
 }
 
-void *zhash_extract_by_str(ztable_t *hash_table, const char *key)
+void *zhash_extract_by_int(ztable_t *hash_table, const uint64_t key_int64)
 {
 	size_t       size;
 	zentry_t     *entry;
 	void         *val;
-	const size_t hash   = zgenerate_hash_by_str(hash_table, key);
+	const size_t hash   = zgenerate_hash_by_key_int64(hash_table, key_int64);
 	entry = hash_table->entries[hash];
 
-	if (entry && strcmp(key, entry->Key.key_str) == 0) {
+	if (entry && key_int64 == entry->Key.key_int64) {
 		hash_table->entries[hash] = entry->next;
 	} else {
 		while (entry) {
-			if (entry->next && strcmp(key, entry->next->Key.key_str) == 0) {
+			if (entry->next && (key_int64 == entry->next->Key.key_int64)) {
 				zentry_t *deleted_entry;
 
 				deleted_entry = entry->next;
@@ -333,64 +327,19 @@ void *zhash_extract_by_str(ztable_t *hash_table, const char *key)
 	return (val);
 }
 
-void *zhash_extract_by_int(ztable_t *hash_table, const u_int32_t key)
+void *zhash_extract_by_str(ztable_t *hash_table, const char *key_str, const size_t key_str_len)
 {
-	size_t       size;
-	zentry_t     *entry;
-	void         *val;
-	const size_t hash   = zgenerate_hash_by_int(hash_table, key);
-	entry = hash_table->entries[hash];
-
-	if (entry && key == entry->Key.key_int) {
-		hash_table->entries[hash] = entry->next;
-	} else {
-		while (entry) {
-			if (entry->next && (key == entry->next->Key.key_int)) {
-				zentry_t *deleted_entry;
-
-				deleted_entry = entry->next;
-				entry->next = entry->next->next;
-				entry = deleted_entry;
-				break;
-			}
-			entry = entry->next;
-		}
-	}
-
-	if (!entry) return (NULL);
-
-	val = entry->Val.val;
-	zentry_t_release(entry, false, 0);
-	hash_table->entry_count--;
-
-	size = hash_sizes[hash_table->size_index];
-
-	if (hash_table->entry_count < size / 8) {
-		zhash_rehash(hash_table, previous_size_index(hash_table->size_index));
-	}
-
-	return (val);
+	const uint64_t key_int64 = zhash_key_int64_from_key_str(key_str, key_str_len);
+	return zhash_extract_by_int(hash_table, key_int64);
 }
 
-bool zhash_exists_by_str(ztable_t *hash_table, const char *key)
+bool zhash_exists_by_int(const ztable_t *hash_table, const uint64_t key_int64)
 {
 	zentry_t     *entry;
-	const size_t hash   = zgenerate_hash_by_str(hash_table, key);
-
+	const size_t hash   = zgenerate_hash_by_key_int64(hash_table, key_int64);
 	entry = hash_table->entries[hash];
 
-	while (entry && strcmp(key, entry->Key.key_str) != 0) entry = entry->next;
-
-	return (entry ? true : false);
-}
-
-bool zhash_exists_by_int(const ztable_t *hash_table, const u_int32_t key)
-{
-	zentry_t     *entry;
-	const size_t hash   = zgenerate_hash_by_int(hash_table, key);
-	entry = hash_table->entries[hash];
-
-	while (entry && key != entry->Key.key_int) entry = entry->next;
+	while (entry && key_int64 != entry->Key.key_int64) entry = entry->next;
 	if (entry) {
 		return true;
 	}
@@ -398,24 +347,13 @@ bool zhash_exists_by_int(const ztable_t *hash_table, const u_int32_t key)
 	return false;
 }
 
-void zentry_t_release(zentry_t *entry, const bool recursive, const int force_values_clean)
+bool zhash_exists_by_str(ztable_t *hash_table, const char *key_str, size_t key_str_len)
 {
-	if (recursive && entry->next) zentry_t_release(entry->next, recursive, force_values_clean);
-
-	if (NULL != entry->Key.key_str) {
-		DDD("Going to release entry: %p\n", entry);
-		DDD("Going to release entry->Key.key_str: %p\n", entry->Key.key_str);
-		zfree(entry->Key.key_str);
-		entry->Key.key_str = NULL;
-
-		/* If asked to clean the values kept in the ztable: */
-		if (force_values_clean && NULL != entry->Val.val) {
-			zfree(entry->Val.val);
-		}
-	}
-
-	zfree(entry);
+	const uint64_t key_int64 = zhash_key_int64_from_key_str(key_str, strnlen(key_str, key_str_len));
+	return zhash_exists_by_int(hash_table, key_int64);
 }
+
+/*** Iterate all items in hash ***/
 
 zentry_t *zhash_list(const ztable_t *hash_table, size_t *index, const zentry_t *entry)
 {
@@ -506,7 +444,7 @@ void *zhash_to_buf(const ztable_t *hash_table, size_t *size)
 			zentry->watemark = ZENTRY_WATERMARK;
 			zentry->checksum = 0;
 			zentry->key_len = entry->Key.key_str_len;
-			zentry->key_int = entry->Key.key_int;
+			zentry->key_int = entry->Key.key_int64;
 			zentry->val_len = entry->Val.val_size;
 
 			/* Now, dump the string key (if any) and val (if any) */
@@ -549,6 +487,9 @@ ztable_t *zhash_from_buf(const char *buf, const size_t size)
 		if (ZENTRY_WATERMARK != zent->watemark) {
 			DE("Bad watermark in zhash_entry_t: expected %X but it is %X\n", ZENTRY_WATERMARK, zent->watemark);
 		}
+
+		/* Create the zhash entry with the given paramenters */
+
 	}
 
 	return NULL;
