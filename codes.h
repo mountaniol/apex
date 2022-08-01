@@ -7,8 +7,8 @@ enum yes_no {
 };
 
 typedef enum status_struct {
-	EXA_AGAIN = -2, /**< Try again later */
-	EXA_ERROR = -1, /**< Error, can not contunue the operation */
+	A_AGAIN = -2, /**< Try again later */
+	A_ERROR = -1, /**< Error, can not contunue the operation */
 	OK = 0, /**< Operation completed successfully */
 } ret_code_t;
 

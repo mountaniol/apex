@@ -119,7 +119,7 @@ static int box_new_from_data_test(void)
 
 
 		#ifdef DEBUG3
-		basket_sz = basket_size(basket);
+		basket_sz = basket_memory_size(basket);
 		#endif /* DEBUG3 */
 
 		basket_release(basket);
@@ -194,7 +194,7 @@ static int box_new_from_data_simple_test(void)
 		abort();
 	}
 
-	basket_sz = basket_size(basket);
+	basket_sz = basket_memory_size(basket);
 	basket_release(basket);
 
 	PR("[TEST] Success: Created, filled, tested and destroyed basket with %u boxes, size was: %d\n", 1, basket_sz);
@@ -345,7 +345,7 @@ void basket_to_buf_test(void)
 	}
 
 	DDD("[TEST] Created a flat memory buffer from 'Alice' basket, size of basket = %lu, size of buf %zu, size of Alice text is %zu, overhead of the basket = %zu\n",
-		basket_size(basket), flat_buf_size, strlen(string_alice_all), flat_buf_size - strlen(string_alice_all));
+		basket_memory_size(basket), flat_buf_size, strlen(string_alice_all), flat_buf_size - strlen(string_alice_all));
 
 	basket_2 = basket_from_buf(flat_buf, flat_buf_size);
 	if (NULL == basket_2) {

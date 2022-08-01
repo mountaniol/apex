@@ -8,6 +8,7 @@
  */
 #include <stdint.h>
 #include "box_t.h"
+#include "zhash3.h"
 
 /*
  * The Basket structure holds zero or more boxes.
@@ -67,21 +68,25 @@ typedef struct {
 	uint64_t ticket; /**< Ticket is for free use. End use can put here whatever she/he wants. */
 	box_u32_t boxes_used; /**< Number of bufs in the array */
 	box_u32_t boxes_allocated; /**< For internal use: how many buf_t pointers are allocated in the 'bufs' */
+	ztable_t *zhash;
 } basket_t;
 
-typedef struct {
+typedef struct __attribute__((packed)) {
 	uint32_t watermark; /**< Watermark: filled with a predefined pattern WATERMARK_BOX */
 	uint32_t box_size; /** The< size of the box, not include ::box_size and ::box_checksum fields */
 	uint32_t box_checksum; /**< The checksum of box buffer, means ::box_dump field; This field is optional, and ignored if == 0 */
-} __attribute__((packed)) box_dump_t;
+}
+box_dump_t;
 
-	typedef struct {
+typedef struct __attribute__((packed)) {
 	uint32_t watermark; /**< Watermark: filled with a predefined pattern WATERMARK_BASKET */
 	uint64_t ticket; /**< The same as ticket in ::basket_t, for free use */
 	uint32_t total_len; /**< Total length of this buffer, including 'total_len' field */
 	uint32_t boxes_num; /**< Number of Boxed in this buffer */
 	uint32_t basket_checksum; /**< The checksum of box buffer, means ::box_dump field; This field is optional, and ignored if == 0 */
-} __attribute__((packed)) basket_send_header_t;
+	uint32_t ztable_buf_size; /**< Size (in bytes) of ztable buffer. If '0' meant no ztable */
+}
+basket_send_header_t;
 
 /*** Getter / Setter functions ***/
 /* We populate these function for test purposes. Should not be used out of test */
@@ -94,7 +99,7 @@ typedef struct {
  * @return box_t* Pointer to a box, NULL on an error or if the box is not allocated yet
  * @details If NULL returned it is not an error. On a critical error this function will call abort().
  */
-	extern void *basket_get_box(const void *basket, const box_u32_t box_index);
+extern void *basket_get_box(const void *basket, const box_u32_t box_index);
 
 /*** Basket create / release ***/
 
@@ -108,13 +113,29 @@ extern void *basket_new(void);
 
 /**
  * @author Sebastian Mountaniol (7/15/22)
- * @brief Return total size of Mvox object in bytes
+ * @brief Return total size of basket object (bytes)  in memory
  * @param const void *basket  Basket to measure
  * @return size_t Size of the Basket object and all buffers in
  *  	   all boxes
- * @details 
+ * @details This function calculates size of current buffer in
+ *  		memory. If you want to know what size of flat memory
+ *  		buffer will be, use ::basket_flat_buf_size()
  */
-extern size_t basket_size(const void *basket);
+extern size_t basket_memory_size(const void *basket);
+
+/**
+ * @author Sebastian Mountaniol (7/31/22)
+ * @brief Calculate size of a memoty buffer needded to hold the
+ *  	  flat memory buffer with a basket dump
+ * @param const basket_t* basket Pointer to basket struct
+ * @return size_t Size of the buffer (in bytes) needded to
+ *  	   contain the flat memory basket dump
+ * @details This function calculates the size of memory buffer
+ *  		needded to hold 'flat memory' representation of the
+ *  		basket. Uf you want to know the size of the basket
+ *  		in memory, use ::basket_memory_size() function
+ */
+extern size_t basket_flat_buf_size(const basket_t *basket)
 
 /**
  * @author Sebastian Mountaniol (6/12/22)
@@ -406,5 +427,168 @@ extern ret_t box_data_free(void *basket, const box_u32_t box_num);
  * @details 
  */
 extern void *box_steal_data(void *_basket, const box_u32_t box_num);
+
+/*** KEY/VALUE API ***/
+
+/*
+ * The key/value facility of the basket is a zhash table.
+ * You can add / search and use / extract value from this hash,
+ * using both string and integer key in mixing mode.
+ * You also can convert a string key into an integer value,
+ * if you need to speed up frequent key/valu operation.
+ *
+ * The key/value hash will be added to a flat memory buffer,
+ * when you run basket_to_buf(), and restored from the buffer
+ * when you run basket_from_buf() functions.
+ *
+ * The only restriction: if you want to create a flat buffer,
+ * do not keep any complex structures with pointers.
+ *
+ * Also, if you with to save/restore content of key/value,
+ * and you want transfer the flat buffer between machines,
+ * use packed structures.*
+ */
+
+/**
+ * @author Sebastian Mountaniol (8/1/22)
+ * @brief Add key/value pair into basket, where the 'key' is a
+ *  	  integer
+ * @param void* _basket         Basket to add a pair/value
+ * @param basket_key_t* key     Integer key:
+ * @param void* val     Value to keep
+ * @param size_t val_size Size of the value
+ * @return ret_t 0 in case of success, -1 on an error, 1 on key collision
+ * @details The internal implementation uses a modified version
+ *  		of zhash. BE AWARE: key conflicts are possible, always
+ *  		check that returned value is 0. BE AWARE: If you
+ *  		want to create a flat buffer from this basket and
+ *  		later restore the basket from this flat buffer, do
+ *  		not keep any structures with pointers as key/value. The content
+ *  		of the key/value section will be packed as a regular
+ *  		memory, so if your 'value' is a structure and contrains external
+ *  		references, you will get a broken pointer on another
+ *  		machine / in another process space / after restoring it.
+ */
+extern ret_t basket_keyval_add_by_int64(void *basket, uint64_t key_int64, void *val, size_t val_size);
+
+/**
+ * @author Sebastian Mountaniol (8/1/22)
+ * @brief Add key/value pair into basket, where the 'key' is a
+ *  	  string
+ * @param void* _basket         Basket to add a pair/value
+ * @param basket_key_t* key     Integer key:
+ * @param void* val     Value to keep
+ * @param size_t val_size Size of the value
+ * @return ret_t 0 in case of success, -1 on an error, 1 on key collision
+ * @details The internal implementation uses a modified version
+ *  		of zhash. BE AWARE: key conflicts are possible, always
+ *  		check that returned value is 0. BE AWARE: If you
+ *  		want to create a flat buffer from this basket and
+ *  		later restore the basket from this flat buffer, do
+ *  		not keep any structures with pointers as key/value. The content
+ *  		of the key/value section will be packed as a regular
+ *  		memory, so if your 'value' is a structure and contrains external
+ *  		references, you will get a broken pointer on another
+ *  		machine / in another process space / after restoring it.
+ */
+
+extern ret_t basket_keyval_add_by_str(void *basket, char *key_str, size_t key_str_len, void *val, size_t val_size);
+
+/**
+ * @author Sebastian Mountaniol (8/1/22)
+ * @brief Convert string key into a int key.
+ * @param char* key_str    Ket string
+ * @param size_t key_str_len The key string length, without
+ *  			 terminating \0
+ * @return uint64_t An integer on success, 0 value in case of an
+ *  	   error
+ * @details The most possible error is your string is too long.
+ *  		The max length of the string must not exceed
+ *  		ZHASH_STRING_KEY_MAX_LEN, which is 64 today, when I
+ *  		am writing this description
+ */
+extern uint64_t basket_keyval_str_to_int64(char *key_str, size_t key_str_len);
+
+/**
+ * @author Sebastian Mountaniol (8/1/22)
+ * @brief Find a value by integer key. The value will not be
+ *  	  extracted, just a pointer returned. 
+ * @param void* _basket Basket to search for a value by given
+ *  		  key
+ * @param uint64_t key_int64    Key to search value by
+ * @param size_t *val_size - This field will be filled with the
+ *  			 size (in bytes) of the returned value. In case
+ *  			 the value not found, the 'size' will be 0, in
+ *  			 case of an error the 'size' will fe filled with
+ *  			 -1
+ * @return void* Pointer to the value kapt by this key, NULL on
+ *  	   an error. Also, the value of 'size' will be modified,
+ *  	   see description above.
+ * @details WARNING: In case you want to create a flat memory
+ *  		buffer from this basket, avoid operations changing
+ *  		the value buffer size.
+ */
+extern void *basket_keyval_find_by_int64(void *_basket, uint64_t key_int64, ssize_t *val_size);
+
+/**
+ * @author Sebastian Mountaniol (8/1/22)
+ * @brief Find a value by string. The value will not be
+ *  	  extracted, just a pointer returned.  
+ * @param void* _basket   Basket top search by given key 
+ * @param char* key_str    The string key
+ * @param size_t key_str_len The string key length
+ * @param ssize_t* val_size   In this variable the size of the
+ *  			 value (in bytes) will be returned. If no such
+ *  			 key/value pair found, the 'val_size' will be
+ *  			 set to 0. On an error it will be set to -1.
+ * @return void* Poiter to the found value, NULL if no such
+ *  	   key/value pair exists, also NULL on error. The
+ *  	   'val_size' will be modified depending on
+ *  	   nonfound/error
+ * @details The returned value will not be extracted from the
+ *  		key/value hash. You can use it but do not release
+ *  		it, and do not change the size of the value buffer,
+ *  		if you want to create a flat buffer from this
+ *  		basket.
+ */
+extern void *basket_keyval_find_by_str(void *_basket, char *key_str, size_t key_str_len, ssize_t *val_size);
+
+/**
+ * @author Sebastian Mountaniol (8/1/22)
+ * @brief Extract a value by saved by given key
+ * @param void* _basket Basket to extract the value buffer from
+ * @param uint64_t key_int64    The int key to find
+ * @param size_t* size   This will be filled with the size of
+ *  			the value buffer. If no such key/value exists
+ *  			for the given key, the 'size' will be filled
+ *  			with 0, on an error the 'size' will be filled
+ *  			with -1
+ * @return void* A pointer to the value buffer on success, NULL
+ *  	   on error or if nothing found by given key. The value
+ *  	   of 'size' will be modified to signify the reason why
+ *  	   NULL returned, see above.
+ * @details The value will be removed from key/value hash. 
+ */
+extern void *basket_keyval_extract_by_in64(void *_basket, uint64_t key_int64, size_t *size);
+
+/**
+ * @author Sebastian Mountaniol (8/1/22)
+ * @brief Extract a value by saved by given key
+ * @param void* _basket Basket to extract the value buffer from
+ * @param char *key_str The string key to find a value
+ * @param size_t key_str_len - The length of the string
+ *  			 excluding terminating \0
+ * @param size_t* size   This will be filled with the size of
+ *  			the value buffer. If no such key/value exists
+ *  			for the given key, the 'size' will be filled
+ *  			with 0, on an error the 'size' will be filled
+ *  			with -1
+ * @return void* A pointer to the value buffer on success, NULL
+ *  	   on error or if nothing found by given key. The value
+ *  	   of 'size' will be modified to signify the reason why
+ *  	   NULL returned, see above.
+ * @details The value will be removed from key/value hash. 
+ */
+extern void *basket_keyval_extract_by_str(void *_basket, char *key_str, size_t key_str_len, size_t *size);
 
 #endif /* BASKET_H_ */

@@ -150,7 +150,7 @@ FATTR_WARN_UNUSED_RET static box_s64_t basket_get_last_box_index(const void *bas
 	return _basket->boxes_used - 1;
 }
 
-FATTR_WARN_UNUSED_RET size_t basket_size(const void *basket)
+FATTR_WARN_UNUSED_RET size_t basket_memory_size(const void *basket)
 {
 	const basket_t *_basket  = basket;
 	/* Index variable to iterate boxes */
@@ -448,16 +448,7 @@ FATTR_WARN_UNUSED_RET ret_t basket_collapse(void *basket)
 	return 0;
 }
 
-/**
- * @author Sebastian Mountaniol (7/31/22)
- * @brief Calculate size of buffer needded to hold the flat
- *  	  memory buffer with a basket dump
- * @param const basket_t* basket Pointer to basket struct
- * @return size_t Size of the buffer (in bytes) needded to
- *  	   contain the flat memory basket dump
- * @details 
- */
-static size_t basket_calculate_size_of_flat_buf(const basket_t *basket)
+size_t basket_flat_buf_size(const basket_t *basket)
 {
 	box_u32_t box_index;
 	size_t    buf_size  = sizeof(basket_send_header_t);
@@ -469,6 +460,11 @@ static size_t basket_calculate_size_of_flat_buf(const basket_t *basket)
 	for (box_index = 0; box_index < basket->boxes_used; box_index++) {
 		const box_t *box = basket_get_box(basket, box_index);
 		buf_size += bx_used_take(box);
+	}
+
+	/* If there key/value hash, add the size of needded to dump it into calculation */
+	if (basket->zhash) {
+		buf_size += zhash_to_buf_allocation_size(basket->zhash);
 	}
 	return buf_size;
 }
@@ -505,6 +501,11 @@ static void basket_fill_send_header_from_basket_t(basket_send_header_t *basket_b
 
 	/* Watermark: a predefined pattern. */
 	basket_buf_header_p->watermark = WATERMARK_BASKET;
+
+	/* If there is key/value, hget the size */
+	if (basket->zhash) {
+		basket_buf_header_p->ztable_buf_size = zhash_to_buf_allocation_size(basket);
+	}
 
 	/* TODO: The checksum not implemented yet */
 	basket_buf_header_p->basket_checksum = 0;
@@ -576,7 +577,9 @@ FATTR_WARN_UNUSED_RET void *basket_to_buf(const void *basket, size_t *size)
 
 	/* Let's calculate required buffer size */
 
-	buf_size             = basket_calculate_size_of_flat_buf(_basket);
+	/*** 1. Fill the header of this buffer ***/
+
+	buf_size             = basket_flat_buf_size(_basket);
 	/* Alocate the memory buffer */
 	buf = malloc(buf_size);
 	TESTP(buf, NULL);
@@ -590,6 +593,9 @@ FATTR_WARN_UNUSED_RET void *basket_to_buf(const void *basket, size_t *size)
 	/* Advance memory byffer poiter */
 	buf_offset += sizeof(basket_send_header_t);
 
+
+	/*** 2. Dump all boxes ***/
+
 	/* Now we run on array of boxes, and add one by one to the buffer */
 
 	for (box_index = 0; box_index < _basket->boxes_used; box_index++) {
@@ -598,6 +604,17 @@ FATTR_WARN_UNUSED_RET void *basket_to_buf(const void *basket, size_t *size)
 
 		/* Advance memory byffer pointer bu size of the returned offset */
 		buf_offset += basket_fill_send_box_from_box_t(box_dump_header_p, box);
+	}
+
+	/*** 3. Dump key/value ***/
+	/* TODO: Pass the buffer to fill to zhash from outside */
+	if (_basket->zhash) {
+		size_t zsize;
+		char *zhash_dump = zhash_to_buf(_basket->zhash, &zsize);
+		TESTP_ABORT (zhash_dump);
+		memcpy((buf + buf_offset), zhash_dump, size);
+		free(zhash_dump);
+		buf_offset += zsize;
 	}
 
 	DDD("Returning buffer, size: %zu, counted offset is: %zu\n", buf_size, buf_offset);
@@ -687,6 +704,12 @@ FATTR_WARN_UNUSED_RET void *basket_from_buf(void *buf, const size_t size)
 
 		/* Increase number of used boxes */
 		basket->boxes_used++;
+	}
+
+	/*** Restore zhash, is presents ***/
+	if (basket_buf_header->ztable_buf_size > 0) {
+		basket->zhash = zhash_from_buf(buf_char + buf_offset, basket_buf_header->ztable_buf_size);
+		buf_offset += basket_buf_header->ztable_buf_size;
 	}
 
 	return basket;
