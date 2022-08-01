@@ -70,26 +70,6 @@ static ztable_t *zcreate_hash_table_with_size(const size_t size_index)
 }
 
 /**
- * @author Sebastian Mountaniol (7/28/22)
- * @brief Generate integer key (hash) from the string 
- * @param const char* key_str   String
- * @param const size_t key_str_len   String length
- * @return uint64_t Calculated hash (key value)
- * @details BE AWARE: This is an internal function. No values
- *  		validation.
- */
-static uint64_t zhash_key_int64_from_key_str(const char *key_str, const size_t key_str_len)
-{
-	uint64_t key_int64 = 0;
-	if (0 == key_str_len) {
-		DE("Wrong arguments: key_str = %p, key_str_len = %zu\n", key_str, key_str_len);
-		abort();
-	}
-	MurmurHash3_x86_128_to_64(key_str, key_str_len, ZHASH_MURMUR_SEED, &key_int64);
-	return key_int64;
-}
-
-/**
  * @author Sebastian Mountaniol (7/31/22)
  * @brief Generate hash, means: index in zhash->entries array
  * @param const ztable_t* hash_table Pointer to hash table
@@ -152,7 +132,11 @@ static void zhash_rehash(ztable_t *hash_table, const size_t size_index)
  * @details BE AWARE: This is an internal function. No values
  *  		validation. 
  */
-static void zhash_dump(const ztable_t *hash_table, const char *name)
+#ifdef DEBUG3
+void zhash_dump(const ztable_t *hash_table, const char *name)
+#else
+void zhash_dump(const ztable_t *hash_table, __attribute__((unused))const char *name)
+#endif
 {
 	size_t   size;
 	size_t   ii;
@@ -346,12 +330,12 @@ static void *zhash_entry_find_by_str(const ztable_t *hash_table, char *key_str, 
 
 /*** END OF STATIC FUNCTIONS ***/
 
-ztable_t *zhash_table_allocate(void)
+ztable_t *zhash_allocate(void)
 {
 	return (zcreate_hash_table_with_size(0));
 }
 
-void zhash_table_release(ztable_t *hash_table, const int force_values_clean)
+void zhash_release(ztable_t *hash_table, const int force_values_clean)
 {
 	size_t size;
 	size_t ii;
@@ -370,6 +354,18 @@ void zhash_table_release(ztable_t *hash_table, const int force_values_clean)
 	zfree(hash_table->entries);
 	zfree(hash_table);
 }
+
+uint64_t zhash_key_int64_from_key_str(const char *key_str, const size_t key_str_len)
+{
+	uint64_t key_int64 = 0;
+	if (0 == key_str_len) {
+		DE("Wrong arguments: key_str = %p, key_str_len = %zu\n", key_str, key_str_len);
+		abort();
+	}
+	MurmurHash3_x86_128_to_64(key_str, key_str_len, ZHASH_MURMUR_SEED, &key_int64);
+	return key_int64;
+}
+
 
 int zhash_insert_by_int(ztable_t *hash_table, uint64_t int_key, void *val, size_t val_size)
 {
@@ -393,7 +389,7 @@ int zhash_insert_by_str(ztable_t *hash_table,
 	return zhash_insert(hash_table, key_int64, key_str_copy, key_str_len, val, val_size);
 }
 
-void *zhash_find_by_int(const ztable_t *hash_table, uint64_t key_int64)
+void *zhash_find_by_int(const ztable_t *hash_table, uint64_t key_int64, ssize_t *val_size)
 {
 	zentry_t     *entry;
 	const size_t hash   = zhash_entry_index_by_int(hash_table, key_int64);
@@ -401,19 +397,25 @@ void *zhash_find_by_int(const ztable_t *hash_table, uint64_t key_int64)
 
 	while (entry && (key_int64 != entry->Key.key_int64)) entry = entry->next;
 
-	return (entry ? entry->Val.val : NULL);
+	if (NULL == entry) {
+		*val_size = 0;
+		return NULL;
+	}
+
+	*val_size = (ssize_t)entry->Val.val_size;
+	return entry->Val.val;
 }
 
 /* TODO: Convert string to int and search by  int */
-void *zhash_find_by_str(const ztable_t *hash_table, char *key_str, const size_t key_str_len)
+void *zhash_find_by_str(const ztable_t *hash_table, char *key_str, const size_t key_str_len, ssize_t *val_size)
 {
 	uint64_t key_int64 = zhash_key_int64_from_key_str(key_str, key_str_len);
 	DDD("Calculated key_int: %lX\n", key_int64);
-	return zhash_find_by_int(hash_table, key_int64);
+	return zhash_find_by_int(hash_table, key_int64, val_size);
 
 }
 
-void *zhash_extract_by_int(ztable_t *hash_table, const uint64_t key_int64)
+void *zhash_extract_by_int(ztable_t *hash_table, const uint64_t key_int64, ssize_t *out_size)
 {
 	size_t       size;
 	zentry_t     *entry;
@@ -440,6 +442,7 @@ void *zhash_extract_by_int(ztable_t *hash_table, const uint64_t key_int64)
 	if (!entry) return (NULL);
 
 	val = entry->Val.val;
+	*out_size = entry->Val.val_size;
 	zentry_t_release(entry, false, 0);
 	hash_table->entry_count--;
 
@@ -452,10 +455,10 @@ void *zhash_extract_by_int(ztable_t *hash_table, const uint64_t key_int64)
 	return (val);
 }
 
-void *zhash_extract_by_str(ztable_t *hash_table, const char *key_str, const size_t key_str_len)
+void *zhash_extract_by_str(ztable_t *hash_table, const char *key_str, const size_t key_str_len, ssize_t *size)
 {
 	const uint64_t key_int64 = zhash_key_int64_from_key_str(key_str, key_str_len);
-	return zhash_extract_by_int(hash_table, key_int64);
+	return zhash_extract_by_int(hash_table, key_int64, size);
 }
 
 bool zhash_exists_by_int(const ztable_t *hash_table, const uint64_t key_int64)
@@ -618,7 +621,7 @@ ztable_t *zhash_from_buf(const char *buf, const size_t size)
 	}
 
 	/* From the header we know the count of entries in the zhash table */
-	ztable_t *zt = zhash_table_allocate();
+	ztable_t *zt = zhash_allocate();
 	TESTP(zt, NULL);
 
 	offset += sizeof(zhash_header_t);
@@ -654,6 +657,11 @@ ztable_t *zhash_from_buf(const char *buf, const size_t size)
 	}
 
 	DDD("Offset: %lu, size : %zu\n", offset, size);
+
+	if (offset != size) {
+		DE("Size of extracted zhash (%zu) is not what expected (%zu)\n", offset, size);
+		TRY_ABORT();
+	}
 
 	zhash_dump(zt, "RESTORED FROM FLAT BUFFER");
 	return zt;

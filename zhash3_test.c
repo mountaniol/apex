@@ -6,7 +6,7 @@
 
 static ztable_t *zllocate_empty_zhash(void)
 {
-	ztable_t *zt = zhash_table_allocate();
+	ztable_t *zt = zhash_allocate();
 	if (NULL == zt) {
 		DE("[TEST] Failed to allocate zhash table\n");
 		abort();
@@ -34,7 +34,7 @@ static void basic_test(void)
 	ztable_t *zt = zllocate_empty_zhash();
 
 	/* Free the table, force cleaning values. And let's see what happens */
-	zhash_table_release(zt, 1);
+	zhash_release(zt, 1);
 	DD("[TEST] Successfully finished basic test\n");
 }
 
@@ -50,6 +50,7 @@ static void basic_test(void)
 static void add_one_item_test(void)
 {
 	/* Allocate an empty zhash table */
+	ssize_t val_size;
 	ztable_t *zt       = zllocate_empty_zhash();
 
 	void     *item     = malloc(ONE_ITEM_SIZE);
@@ -67,11 +68,15 @@ static void add_one_item_test(void)
 	DDD("Inserted item: %p\n", item);
 
 	/* Try to extract the item by the key */
-	item_ret = zhash_find_by_str(zt, ONE_ITEM_SIZE_KEY_STR, strlen(ONE_ITEM_SIZE_KEY_STR));
+	item_ret = zhash_find_by_str(zt, ONE_ITEM_SIZE_KEY_STR, strlen(ONE_ITEM_SIZE_KEY_STR), &val_size);
 
 	/* The poiter must be the same */
 	if (item_ret != item) {
 		DE("[TEST] Pointer of returned item (%p) does not match th item (%p)\n", item_ret, item);
+		abort();
+	}
+	if (val_size != ONE_ITEM_SIZE) {
+		DE("[TEST] Wrong size returned: expected %zd but it is %zd\n", ONE_ITEM_SIZE, val_size);
 		abort();
 	}
 
@@ -81,7 +86,7 @@ static void add_one_item_test(void)
 
 	/* Free the table */
 	DDD("Going to release the hass table. Also release the values. \n");
-	zhash_table_release(zt, 1);
+	zhash_release(zt, 1);
 	DD("[TEST] Successfully finished basic test\n");
 }
 
@@ -89,6 +94,7 @@ static void add_one_item_test(void)
 #define NUMBER_OF_ITEMS (1024 * 2048)
 static void add_many_items_test(void)
 {
+	ssize_t val_size;
 	/* Allocate an empty zhash table */
 	uint32_t   index;
 	const char *key_base          = "Key";
@@ -117,11 +123,16 @@ static void add_many_items_test(void)
 		DDD("Inserted item: %p\n", item);
 
 		/* Try to extract the item by the key */
-		item_ret = zhash_find_by_str(zt, key_full_name, key_full_name_size);
+		item_ret = zhash_find_by_str(zt, key_full_name, key_full_name_size, &val_size);
 
 		/* The poiter must be the same */
 		if (item_ret != item) {
-			DE("[TEST] Pointer of returned item (%p) does not match th item (%p)\n", item_ret, item);
+			DE("[TEST] Pointer of returned item (%p) does not match the item (%p)\n", item_ret, item);
+			abort();
+		}
+
+		if (val_size != ONE_ITEM_SIZE) {
+			DE("[TEST] Wrong size returned: expected %zd but it is %zd\n", ONE_ITEM_SIZE, val_size);
 			abort();
 		}
 
@@ -133,7 +144,7 @@ static void add_many_items_test(void)
 		DDD("Going to release the hass table. Also release the values. \n");
 	}
 
-	zhash_table_release(zt, 1);
+	zhash_release(zt, 1);
 	DD("[TEST] Successfully finished basic test\n");
 }
 
@@ -143,6 +154,7 @@ static void add_many_items_test(void)
 #define NUMBER_OF_ITEMS_ZHASH_TO_BUF (1024)
 static void zhash_to_buf_and_back(void)
 {
+	ssize_t val_size;
 	/* Allocate an empty zhash table */
 	uint32_t   index;
 	const char *key_base          = "Key";
@@ -175,11 +187,16 @@ static void zhash_to_buf_and_back(void)
 		DDD("Inserted item: %p\n", item);
 
 		/* Try to extract the item by the key */
-		item_ret = zhash_find_by_str(zt, key_full_name, key_full_name_size);
+		item_ret = zhash_find_by_str(zt, key_full_name, key_full_name_size, &val_size);
 
 		/* The poiter must be the same */
 		if (item_ret != item) {
 			DE("[TEST] Pointer of returned item (%p) does not match th item (%p)\n", item_ret, item);
+			abort();
+		}
+
+		if (val_size != ONE_ITEM_SIZE) {
+			DE("[TEST] Wrong size returned: expected %zd but it is %zd\n", ONE_ITEM_SIZE, val_size);
 			abort();
 		}
 
@@ -213,8 +230,8 @@ static void zhash_to_buf_and_back(void)
 	}
 
 	DDD("Going to release the zhash tables. Also release the values. \n");
-	zhash_table_release(zt, 1);
-	zhash_table_release(zt2, 1);
+	zhash_release(zt, 1);
+	zhash_release(zt2, 1);
 	DD("[TEST] Successfully finished zhash-to-buf and buf-to-zhash test\n");
 }
 

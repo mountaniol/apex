@@ -135,7 +135,7 @@ extern size_t basket_memory_size(const void *basket);
  *  		basket. Uf you want to know the size of the basket
  *  		in memory, use ::basket_memory_size() function
  */
-extern size_t basket_flat_buf_size(const basket_t *basket)
+extern size_t basket_flat_buf_size(const basket_t *basket);
 
 /**
  * @author Sebastian Mountaniol (6/12/22)
@@ -459,9 +459,10 @@ extern void *box_steal_data(void *_basket, const box_u32_t box_num);
  * @param size_t val_size Size of the value
  * @return ret_t 0 in case of success, -1 on an error, 1 on key collision
  * @details The internal implementation uses a modified version
- *  		of zhash. BE AWARE: key conflicts are possible, always
- *  		check that returned value is 0. BE AWARE: If you
- *  		want to create a flat buffer from this basket and
+ *  		of zhash.<br>
+ *  		BE AWARE: key conflicts are possible, always
+ *  		check that returned value is 0.<br>
+ *  		BE AWARE: If you want to create a flat buffer from this basket and
  *  		later restore the basket from this flat buffer, do
  *  		not keep any structures with pointers as key/value. The content
  *  		of the key/value section will be packed as a regular
@@ -476,36 +477,46 @@ extern ret_t basket_keyval_add_by_int64(void *basket, uint64_t key_int64, void *
  * @brief Add key/value pair into basket, where the 'key' is a
  *  	  string
  * @param void* _basket         Basket to add a pair/value
- * @param basket_key_t* key     Integer key:
- * @param void* val     Value to keep
- * @param size_t val_size Size of the value
- * @return ret_t 0 in case of success, -1 on an error, 1 on key collision
+ * @param char *key_str			String key. This string will be
+ *  		   duplicated, the caller can release this string
+ *  		   after call.
+ * @param size_t key_str_len	The length of the key_str,
+ *  			 excluding the terminating \0
+ * @param void* val     Value to keep in basket key/value
+ *  		  repository
+ * @param size_t val_size Size of the value to keep in key/value
+ *  			 repository
+ * @return ret_t in case of success 0 returned, -1 on an error,
+ *  	   1 on key collision, see details
  * @details The internal implementation uses a modified version
- *  		of zhash. BE AWARE: key conflicts are possible, always
- *  		check that returned value is 0. BE AWARE: If you
- *  		want to create a flat buffer from this basket and
- *  		later restore the basket from this flat buffer, do
- *  		not keep any structures with pointers as key/value. The content
- *  		of the key/value section will be packed as a regular
- *  		memory, so if your 'value' is a structure and contrains external
- *  		references, you will get a broken pointer on another
- *  		machine / in another process space / after restoring it.
+ *  		of zhash.<br>
+ *  		BE AWARE: key conflicts are possible, always check
+ *  		that returned value is 0.<br>
+ *  		BE AWARE: If you want to create a flat buffer from
+ *  		this basket and later restore the basket from this
+ *  		flat buffer, do not keep any structures with
+ *  		pointers as in key/value repository. The content of
+ *  		the key/value section will be packed as a regular
+ *  		memory, so if your 'value' buffer is a structure,
+ *  		and it contrains pointer to external references, you
+ *  		will get a broken pointer on another machine / in
+ *  		another process space / after restoring it from flat
+ *  		buffer.
  */
-
 extern ret_t basket_keyval_add_by_str(void *basket, char *key_str, size_t key_str_len, void *val, size_t val_size);
 
 /**
  * @author Sebastian Mountaniol (8/1/22)
- * @brief Convert string key into a int key.
- * @param char* key_str    Ket string
+ * @brief Convert string key into a integer64 key
+ * @param char* key_str    Key string
  * @param size_t key_str_len The key string length, without
  *  			 terminating \0
  * @return uint64_t An integer on success, 0 value in case of an
  *  	   error
- * @details The most possible error is your string is too long.
- *  		The max length of the string must not exceed
- *  		ZHASH_STRING_KEY_MAX_LEN, which is 64 today, when I
- *  		am writing this description
+ * @details The most possible error it is your string is too
+ *  		long. The max length of the string must not exceed
+ *  		ZHASH_STRING_KEY_MAX_LEN, which is 64 (bytes) today,
+ *  		when I am writing this description
  */
 extern uint64_t basket_keyval_str_to_int64(char *key_str, size_t key_str_len);
 
@@ -558,7 +569,7 @@ extern void *basket_keyval_find_by_str(void *_basket, char *key_str, size_t key_
  * @brief Extract a value by saved by given key
  * @param void* _basket Basket to extract the value buffer from
  * @param uint64_t key_int64    The int key to find
- * @param size_t* size   This will be filled with the size of
+ * @param ssize_t* size   This will be filled with the size of
  *  			the value buffer. If no such key/value exists
  *  			for the given key, the 'size' will be filled
  *  			with 0, on an error the 'size' will be filled
@@ -569,7 +580,7 @@ extern void *basket_keyval_find_by_str(void *_basket, char *key_str, size_t key_
  *  	   NULL returned, see above.
  * @details The value will be removed from key/value hash. 
  */
-extern void *basket_keyval_extract_by_in64(void *_basket, uint64_t key_int64, size_t *size);
+extern void *basket_keyval_extract_by_in64(void *_basket, uint64_t key_int64, ssize_t *size);
 
 /**
  * @author Sebastian Mountaniol (8/1/22)
@@ -578,7 +589,7 @@ extern void *basket_keyval_extract_by_in64(void *_basket, uint64_t key_int64, si
  * @param char *key_str The string key to find a value
  * @param size_t key_str_len - The length of the string
  *  			 excluding terminating \0
- * @param size_t* size   This will be filled with the size of
+ * @param ssize_t* size   This will be filled with the size of
  *  			the value buffer. If no such key/value exists
  *  			for the given key, the 'size' will be filled
  *  			with 0, on an error the 'size' will be filled
@@ -589,6 +600,6 @@ extern void *basket_keyval_extract_by_in64(void *_basket, uint64_t key_int64, si
  *  	   NULL returned, see above.
  * @details The value will be removed from key/value hash. 
  */
-extern void *basket_keyval_extract_by_str(void *_basket, char *key_str, size_t key_str_len, size_t *size);
+extern void *basket_keyval_extract_by_str(void *_basket, char *key_str, size_t key_str_len, ssize_t *size);
 
 #endif /* BASKET_H_ */

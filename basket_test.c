@@ -63,10 +63,10 @@ static int box_new_from_data_test(void)
 	ssize_t   buf_num;
 	char      *internal_data;
 	box_s64_t lorem_ipsum_size  = (box_s64_t)strnlen(lorem_ipsum, 4096);
-	#ifdef DEBUG3
+#ifdef DEBUG3
 	/* We need this variable only if extended debug is ON */
 	int       basket_sz;
-	#endif /* DEBUG3 */
+#endif /* DEBUG3 */
 
 	/* Iterate array boxes_in_test[], and use each value of this array as a number of boxes in basket */
 	for (i = 0; i < number_of_tests; i++) {
@@ -118,9 +118,9 @@ static int box_new_from_data_test(void)
 		}
 
 
-		#ifdef DEBUG3
+#ifdef DEBUG3
 		basket_sz = basket_memory_size(basket);
-		#endif /* DEBUG3 */
+#endif /* DEBUG3 */
 
 		basket_release(basket);
 		DDD("[TEST] Success: Created, filled, tested and destroyed basket with %u boxes, size was: %d\n",
@@ -375,6 +375,134 @@ void basket_to_buf_test(void)
 	PR("[TEST] Success: 'Basket to Flat Memory Buffer' and 'Flat Memory Buffer to Basket' test\n");
 }
 
+#define STR_KEY_LEN (32)
+#define HOW_MANY_KEYVALUE_ENTRIES (1024)
+void basket_test_keyval(void)
+{
+	char       key_str[STR_KEY_LEN];
+	size_t     key_str_len;
+	char       *val;
+	ssize_t    val_size;
+	const char *key_str_base        = "Key";
+
+	int        rc;
+	uint32_t   index;
+	basket_t   *basket              = NULL;
+	basket_t   *basket_2            = NULL;
+	char       *flat_buf;
+	size_t     flat_buf_size;
+
+	/*** Create a basket ***/
+	basket = basket_new();
+	if (NULL == basket) {
+		DE("[TEST] Failed a basket creation\n");
+		abort();
+	}
+
+	/*** Add key/values ***/
+
+	/* Insert HOW_MANY_KEYVALUE_ENTRIES into key/val repository of the basket */
+	for (index = 0; index < HOW_MANY_KEYVALUE_ENTRIES; index++) {
+		/* Clean string */
+		memset(key_str, 0, STR_KEY_LEN);
+		key_str_len = snprintf(key_str, STR_KEY_LEN, "%s_%u", key_str_base, index);
+
+		val = strndup(key_str, key_str_len);
+		val_size = strnlen(val, STR_KEY_LEN) + 1;
+		rc = basket_keyval_add_by_str(basket, key_str, key_str_len, val, val_size);
+		if (rc != 0) {
+			DE("[TEST] Can not add key/val: %s/%p, size %zu, ret value: %d\n", key_str, val, val_size, rc);
+		}
+
+		DDD("Added: key(%s)/size(%zu) val(%s)/size(%zu)\n", key_str, key_str_len, val, val_size);
+	}
+
+	/*** Validate key/values ***/
+
+	for (index = 0; index < HOW_MANY_KEYVALUE_ENTRIES; index++) {
+		char *found;
+		/* Clean string */
+		memset(key_str, 0, STR_KEY_LEN);
+		key_str_len = snprintf(key_str, STR_KEY_LEN, "%s_%u", key_str_base, index);
+		found = basket_keyval_find_by_str(basket, key_str, key_str_len, &val_size);
+		if (NULL == found) {
+			DE("[TEST] Can not find value by key: %s\n", key_str);
+			abort();
+		}
+
+		DDD("Found: key(%s)/size(%zu) val(%s)/size(%zu)\n", key_str, key_str_len, found, val_size);
+
+		if (val_size != ((ssize_t)strlen(found) + 1)) {
+			DE("[TEST] Size not match for key/value: %s/%s, expected %zu but it is %zu\n",
+			   key_str, val, strlen(found), val_size);
+			abort();
+		}
+	}
+
+	/*** Create a flat buffer from the basket ***/
+	flat_buf = basket_to_buf(basket, &flat_buf_size);
+
+	if (NULL == flat_buf) {
+		DE("[TEST] Can not create a flat memory buffer from basket\n");
+		abort();
+	}
+
+	DDD("[TEST] Created a flat memory buffer from 'Alice' basket, size of basket = %lu, size of buf %zu, size of Alice text is %zu, overhead of the basket = %zu\n",
+		basket_memory_size(basket), flat_buf_size, strlen(string_alice_all), flat_buf_size - strlen(string_alice_all));
+
+	basket_2 = basket_from_buf(flat_buf, flat_buf_size);
+	if (NULL == basket_2) {
+		DE("[TEST] Can not create a basket from flat memory buffer\n");
+		abort();
+	}
+
+	free(flat_buf);
+
+	if (basket_compare_basket(basket, basket_2)) {
+		DE("[TEST] Original basket and the restored basket are not the same\n");
+		abort();
+	}
+
+	/*** Validate key/values for the new basket ***/
+
+	for (index = 0; index < HOW_MANY_KEYVALUE_ENTRIES; index++) {
+		char *found;
+		/* Clean string */
+		memset(key_str, 0, STR_KEY_LEN);
+		key_str_len = snprintf(key_str, STR_KEY_LEN, "%s_%u", key_str_base, index);
+		found = basket_keyval_find_by_str(basket_2, key_str, key_str_len, &val_size);
+		if (NULL == found) {
+			DE("[TEST] Can not find value by key: %s\n", key_str);
+			abort();
+		}
+
+		DDD("Found: key(%s)/size(%zu) val(%s)/size(%zu)\n", key_str, key_str_len, found, val_size);
+
+		if (val_size != ((ssize_t)strlen(found) + 1)) {
+			DE("[TEST] Size not match for key/value: %s/%s, expected %zu but it is %zu\n",
+			   key_str, val, strlen(found), val_size);
+			zhash_dump(basket->zhash, "ORIGINAL ZHASH");
+			abort();
+		}
+	}
+
+	rc = basket_release(basket);
+	if (0 != rc) {
+		DE("[TEST] Can not release the original basket\n");
+		abort();
+	}
+
+	rc = basket_release(basket_2);
+	if (0 != rc) {
+		DE("[TEST] Can not release the restored basket\n");
+		abort();
+	}
+
+
+
+	PR("[TEST] Success: Key/Value test\n");
+}
+
 int main(void)
 {
 	basket_new_test();
@@ -382,5 +510,6 @@ int main(void)
 	box_new_from_data_test();
 	basket_collapse_in_place_test();
 	basket_to_buf_test();
+	basket_test_keyval();
 }
 

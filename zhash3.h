@@ -45,9 +45,9 @@ typedef struct ZHashEntry {
  * @details 
  */
 typedef struct __attribute__((packed)){
-		uint32_t size_index; /**< one of predefined value, a primary number, see ::hash_sizes in zhash3.c */
-		uint32_t entry_count; /**< Number of entries added into hash table */
-		zentry_t **entries; /**< Array of entries */
+	uint32_t size_index; /**< one of predefined value, a primary number, see ::hash_sizes in zhash3.c */
+	uint32_t entry_count; /**< Number of entries added into hash table */
+	zentry_t **entries; /**< Array of entries */
 }
 ztable_t;
 
@@ -104,7 +104,7 @@ zhash_entry_t;
  * @return ztable_t* Pointer to new hash table on success, NULL on error
  * @details
  */
-ztable_t *zhash_table_allocate(void);
+ztable_t *zhash_allocate(void);
 
 /**
  * @author Sebastian Mountaniol (23/08/2020)
@@ -117,7 +117,7 @@ ztable_t *zhash_table_allocate(void);
  * @details If the hash table is not empty, all entries will be released as well.
  *          The data kept in the entries not released
  */
-void zhash_table_release(ztable_t *hash_table, const int force_values_clean);
+void zhash_release(ztable_t *hash_table, const int force_values_clean);
 
 /* hash operations */
 
@@ -127,12 +127,14 @@ void zhash_table_release(ztable_t *hash_table, const int force_values_clean);
  * @author Sebastian Mountaniol (23/08/2020)
  * @func void zhash_insert_by_str(ztable_t *hash_table, char *key, void *val)
  * @brief Insert new entry into the hash table. The key is string.
- * @param ztable_t * hash_table A hash table to insert the new entry into
- * @param const char * key The key to used for insert / search
- * @param const size_t key_len - Length of the key
- * @param const void * val Pointer to data
- * @param const size_t val_len - Length of the buffer pointed by 'val'
- * @details
+ * @param ztable_t * hash_table 	A hash table to insert the new entry into
+ * @param char *key_str 			The key to used for insert / search
+ * @param const size_t key_str_len 	Length of the key
+ * @param void *val val 			Pointer to data
+ * @param const size_t val_len		Length of the buffer pointed by 'val'
+ * @details The 'key_str' string will be duplicated.
+ *  		The zhash does not use user's string,
+ *  		and the caller can release the string after call.
  */
 int zhash_insert_by_str(ztable_t *hash_table,
 						char *key_str,
@@ -144,13 +146,16 @@ int zhash_insert_by_str(ztable_t *hash_table,
  * @func void* zhash_find_by_str(ztable_t *hash_table, char *key)
  * @brief Find an entry in hash table
  * @param ztable_t * hash_table The hash table to search
- * @param char * key A null terminated string to use as key for searching
+ * @param char * key_str A null terminated string to use as key
+ *  		   for searching
  * @param size_t key_str_len - Length of the string key without
  *  			 terminating '\0', equal to strlen(key_str)
+ * @param ssize_t *val_size In this variable the size (bytes) of
+ *  			  value will be returned
  * @return void* Pointer to data kept in the hash table, NULL if not found
  * @details The found entry will be not released
  */
-void *zhash_find_by_str(const ztable_t *hash_table, char *key_str, const size_t key_str_len);
+void *zhash_find_by_str(const ztable_t *hash_table, char *key_str, const size_t key_str_len, ssize_t *val_size);
 
 /**
  * @author Sebastian Mountaniol (23/08/2020)
@@ -160,10 +165,12 @@ void *zhash_find_by_str(const ztable_t *hash_table, char *key_str, const size_t 
  * @param char * key A null terminated string to use for search
  * @param size_t key_str_len - Length of the string key without
  *  			 terminating '\0', equal to strlen(key_str)
+ * @param ssize_t *size In this variable the size of Val is
+ *  			  returned
  * @return void* Data kept in hash table, NULL if not found
  * @details This function removes the found entry from the hash and returns data to caller
  */
-void *zhash_extract_by_str(ztable_t *hash_table, const char *key_str, const size_t key_str_len);
+void *zhash_extract_by_str(ztable_t *hash_table, const char *key_str, const size_t key_str_len, ssize_t *size);
 
 /**
  * @author Sebastian Mountaniol (23/08/2020)
@@ -179,6 +186,18 @@ void *zhash_extract_by_str(ztable_t *hash_table, const char *key_str, const size
 bool zhash_exists_by_str(ztable_t *hash_table, const char *key_str, size_t key_str_len);
 
 /* Set of function where the key is an integer */
+
+/**
+ * @author Sebastian Mountaniol (7/28/22)
+ * @brief Generate integer key (hash) from the string 
+ * @param const char* key_str   String
+ * @param const size_t key_str_len   String length
+ * @return uint64_t Calculated hash (key value)
+ * @details BE AWARE: This is an internal function. No values
+ *  		validation.
+ */
+uint64_t zhash_key_int64_from_key_str(const char *key_str, const size_t key_str_len);
+
 
 /**
  * @author Sebastian Mountaniol (23/08/2020)
@@ -200,10 +219,12 @@ int zhash_insert_by_int(ztable_t *hash_table, uint64_t int_key, void *val, size_
  * @param ztable_t * hash_table The hash table to search
  * @param uint64_t key An integer value to use as key for
  *  			   searching
+ * @param ssize_t *val_size In this variable the size (bytes) of
+ *  			  value will be returned
  * @return void* A pointer to data kept in the hash table, NULL if not found
  * @details The found entry will be deleted from the table
  */
-void *zhash_find_by_int(const ztable_t *hash_table, uint64_t key);
+void *zhash_find_by_int(const ztable_t *hash_table, uint64_t key_int64, ssize_t *val_size);
 
 /**
  * @author Sebastian Mountaniol (23/08/2020)
@@ -212,10 +233,11 @@ void *zhash_find_by_int(const ztable_t *hash_table, uint64_t key);
  * @brief Find and extract data from the hash table using an integer as the search key
  * @param ztable_t * hash_table The hash table to search in
  * @param uint64_t key An integer value to use for search
+ * ssize_t *size In this variable the size of value returned
  * @return void* Data kept in hash table, NULL if not found
  * @details This function removes the found entry from the hash and returns data to caller
  */
-void *zhash_extract_by_int(ztable_t *hash_table, const uint64_t key);
+void *zhash_extract_by_int(ztable_t *hash_table, const uint64_t key_int64, ssize_t *size);
 
 /**
  * @author Sebastian Mountaniol (23/08/2020)
@@ -297,6 +319,12 @@ extern ztable_t *zhash_from_buf(const char *buf, const size_t size);
  * @details 
  */
 extern int zhash_cmp_zhash(const ztable_t *left, const ztable_t *right);
+
+#ifdef DEBUG3
+void zhash_dump(const ztable_t *hash_table, const char *name);
+#else
+void zhash_dump(const ztable_t *hash_table, __attribute__((unused))const char *name);
 #endif
 
+#endif
 

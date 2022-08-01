@@ -98,6 +98,10 @@ FATTR_WARN_UNUSED_RET ret_t basket_release(void *basket)
 		DDD("Freed basket->boxes\n");
 	}
 
+	if (_basket->zhash) {
+		zhash_release(_basket->zhash, 1);
+	}
+
 	/* Secure way: clear memory before release it */
 	basket_free_mem(_basket, __func__, __LINE__);
 	return 0;
@@ -504,7 +508,7 @@ static void basket_fill_send_header_from_basket_t(basket_send_header_t *basket_b
 
 	/* If there is key/value, hget the size */
 	if (basket->zhash) {
-		basket_buf_header_p->ztable_buf_size = zhash_to_buf_allocation_size(basket);
+		basket_buf_header_p->ztable_buf_size = (uint32_t)zhash_to_buf_allocation_size(basket->zhash);
 	}
 
 	/* TODO: The checksum not implemented yet */
@@ -606,13 +610,13 @@ FATTR_WARN_UNUSED_RET void *basket_to_buf(const void *basket, size_t *size)
 		buf_offset += basket_fill_send_box_from_box_t(box_dump_header_p, box);
 	}
 
-	/*** 3. Dump key/value ***/
+	/*** 3. Dump key/value hash ***/
 	/* TODO: Pass the buffer to fill to zhash from outside */
 	if (_basket->zhash) {
 		size_t zsize;
-		char *zhash_dump = zhash_to_buf(_basket->zhash, &zsize);
-		TESTP_ABORT (zhash_dump);
-		memcpy((buf + buf_offset), zhash_dump, size);
+		char   *zhash_dump = zhash_to_buf(_basket->zhash, &zsize);
+		TESTP_ABORT(zhash_dump);
+		memcpy((buf + buf_offset), zhash_dump, zsize);
 		free(zhash_dump);
 		buf_offset += zsize;
 	}
@@ -1017,5 +1021,103 @@ FATTR_WARN_UNUSED_RET FATTR_CONST void *box_steal_data(void *basket, const box_u
 	}
 
 	return bx_data_steal(box);
+}
+
+
+/*** KEY/VALUE ***/
+
+/* Allocate zhash, if not allocated yet */
+static void basket_validate_zhash(void *basket)
+{
+	basket_t *_basket = basket;
+	if (NULL == _basket->zhash) {
+		_basket->zhash = zhash_allocate();
+	}
+
+	TESTP_ABORT(_basket->zhash);
+}
+
+ret_t basket_keyval_add_by_int64(void *basket, uint64_t key_int64, void *val, size_t val_size)
+{
+	TESTP(basket, -1);
+	TESTP(val, -1);
+
+	basket_t *_basket = basket;
+	basket_validate_zhash(basket);
+	return zhash_insert_by_int(_basket->zhash, key_int64, val, val_size);
+}
+
+ret_t basket_keyval_add_by_str(void *basket, char *key_str, size_t key_str_len, void *val, size_t val_size)
+{
+	TESTP(basket, -1);
+	TESTP(val, -1);
+
+	basket_t *_basket = basket;
+	basket_validate_zhash(basket);
+	return zhash_insert_by_str(_basket->zhash, key_str, key_str_len, val, val_size);
+}
+
+uint64_t basket_keyval_str_to_int64(char *key_str, size_t key_str_len)
+{
+	TESTP(key_str, 0);
+	return zhash_key_int64_from_key_str(key_str, key_str_len);
+}
+
+void *basket_keyval_find_by_int64(void *basket, uint64_t key_int64, ssize_t *val_size)
+{
+	TESTP(basket, NULL);
+	TESTP(val_size, NULL);
+
+	basket_t *_basket = basket;
+	if (NULL == _basket->zhash) {
+		*val_size = -1;
+		return NULL;
+	}
+	basket_validate_zhash(basket);
+	return zhash_find_by_int(_basket->zhash, key_int64, val_size);
+}
+
+void *basket_keyval_find_by_str(void *basket, char *key_str, size_t key_str_len, ssize_t *val_size)
+{
+	TESTP(basket, NULL);
+	TESTP(key_str, NULL);
+	TESTP(val_size, NULL);
+
+	basket_t *_basket = basket;
+	if (NULL == _basket->zhash) {
+		*val_size = -1;
+		return NULL;
+	}
+	basket_validate_zhash(basket);
+	return zhash_find_by_str(_basket->zhash, key_str, key_str_len, val_size);
+}
+
+void *basket_keyval_extract_by_in64(void *basket, uint64_t key_int64, ssize_t *size)
+{
+	TESTP(basket, NULL);
+	TESTP(size, NULL);
+
+	basket_t *_basket = basket;
+	if (NULL == _basket->zhash) {
+		*size = -1;
+		return NULL;
+	}
+	basket_validate_zhash(basket);
+	return zhash_extract_by_int(_basket->zhash, key_int64, size);
+}
+
+void *basket_keyval_extract_by_str(void *basket, char *key_str, size_t key_str_len, ssize_t *size)
+{
+	TESTP(basket, NULL);
+	TESTP(key_str, NULL);
+	TESTP(size, NULL);
+
+	basket_t *_basket = basket;
+	if (NULL == _basket->zhash) {
+		*size = -1;
+		return NULL;
+	}
+	basket_validate_zhash(basket);
+	return zhash_extract_by_str(_basket->zhash, key_str, key_str_len, size);
 }
 
