@@ -323,7 +323,7 @@ extern void *basket_from_buf(void *buf, const size_t size);
  *  		objects, and not result of ::basket_to_buf()
  *  		function.
  */
-extern int basket_compare_basket(const void *basket_right, const void *basket_left);
+extern int8_t basket_compare_basket(const void *basket_right, const void *basket_left);
 
 /*** A single sector operation - add, remove, modifu sector's memory ***/
 

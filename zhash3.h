@@ -113,12 +113,12 @@ ztable_t *zhash_allocate(void);
  * @param ztable_t * hash_table Hash table to free
  * @param const int force_values_clean If not 0, force releasing
  *  			the user buffers kept in the ztable
- * @param const int force_values_clean - If not 0, release aslo
- *  			all values bu passing them to free().
+ * @param const int8_t force_values_clean - If not 0, release
+ *  			aslo all values bu passing them to free().
  * @details If the hash table is not empty, all entries will be released as well.
  *          The data kept in the entries not released
  */
-void zhash_release(ztable_t *hash_table, const int force_values_clean);
+void zhash_release(ztable_t *hash_table, const int8_t force_values_clean);
 
 /* hash operations */
 
@@ -139,7 +139,7 @@ void zhash_release(ztable_t *hash_table, const int force_values_clean);
  */
 FATTR_WARN_UNUSED_RET
 FATTR_HOT
-int zhash_insert_by_str(ztable_t *hash_table,
+int8_t zhash_insert_by_str(ztable_t *hash_table,
 						char *key_str,
 						const size_t key_str_len,
 						void *val,
@@ -224,7 +224,7 @@ uint64_t zhash_key_int64_from_key_str(const char *key_str, const size_t key_str_
  */
 FATTR_WARN_UNUSED_RET
 FATTR_HOT
-int zhash_insert_by_int(ztable_t *hash_table, uint64_t int_key, void *val, size_t val_size);
+int8_t zhash_insert_by_int(ztable_t *hash_table, uint64_t int_key, void *val, size_t val_size);
 
 /**
  * @author Sebastian Mountaniol (23/08/2020)
@@ -349,7 +349,7 @@ extern ztable_t *zhash_from_buf(const char *buf, const size_t size);
  */
 FATTR_WARN_UNUSED_RET
 FATTR_COLD
-extern int zhash_cmp_zhash(const ztable_t *left, const ztable_t *right);
+extern int8_t zhash_cmp_zhash(const ztable_t *left, const ztable_t *right);
 
 #ifdef DEBUG3
 void zhash_dump(const ztable_t *hash_table, const char *name);

@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdlib.h>
+#include <locale.h>
 #include "zhash3.h"
 #include "debug.h"
 #include "tests.h"
@@ -35,7 +36,7 @@ static void basic_test(void)
 
 	/* Free the table, force cleaning values. And let's see what happens */
 	zhash_release(zt, 1);
-	DD("[TEST] Successfully finished basic test\n");
+	PR("[TEST] Successfully finished basic test\n");
 }
 
 /* Size of the item for the 'one item' test */
@@ -99,11 +100,12 @@ static void add_one_item_test(void)
 	/* Free the table */
 	DDD("Going to release the hass table. Also release the values. \n");
 	zhash_release(zt, 1);
-	DD("[TEST] Successfully finished basic test\n");
+	PR("[TEST] Successfully finished basic test\n");
 }
 
 /* How many items to add into hash */
 #define NUMBER_OF_ITEMS (1024 * 1024 * 10)
+#define KEY_FULL_NAME_LEN (32)
 static void add_many_items_test(void)
 {
 	int rc;
@@ -111,13 +113,13 @@ static void add_many_items_test(void)
 	/* Allocate an empty zhash table */
 	uint32_t   index;
 	const char *key_base          = "Key";
-	char       key_full_name[32];
+	char       key_full_name[KEY_FULL_NAME_LEN];
 	char       key_full_name_size;
 
 	/* This allocation can not fail; it if fail, the execution aborted */
 	ztable_t   *zt                = zllocate_empty_zhash();
 
-	DD("[TEST] Strting a long and intensive test of adding %d items into zhash\n", NUMBER_OF_ITEMS);
+	setlocale(LC_NUMERIC, "");
 
 	for (index = 0; index < NUMBER_OF_ITEMS; index++) {
 		void *item     = malloc(ONE_ITEM_SIZE);
@@ -129,7 +131,7 @@ static void add_many_items_test(void)
 		}
 
 		if (0 == (index % (1024 * 100))) {
-				PR("\rAdding %d / %d  (%.3f %%) \r", index, NUMBER_OF_ITEMS, (double)index/(NUMBER_OF_ITEMS) *100 );
+				PR("\r[TEST] Stress-test: adding %'d / %'d  (%.3f %%) \r", index, NUMBER_OF_ITEMS, (double)index/(NUMBER_OF_ITEMS) *100 );
 		}
 
 		/* Fill the item with the pattern */
@@ -169,20 +171,19 @@ static void add_many_items_test(void)
 
 		DDD("Returned pointer to item: %p\n", item_ret);
 
-		//free(item_ret);
-
 		/* Free the table */
 		DDD("Going to release the hass table. Also release the values. \n");
 	}
 
 	zhash_release(zt, 1);
-	DD("[TEST] Congrats! Successfully finished the stressed zhash\n");
+	PR("\n[TEST] Congrats! Successfully finished the zhash stress-test: added %d items, no collisions\n", NUMBER_OF_ITEMS);
 }
-
 
 /* How many items to create before test zhash to buffer and back */
 // #define NUMBER_OF_ITEMS_ZHASH_TO_BUF (1024)
 #define NUMBER_OF_ITEMS_ZHASH_TO_BUF (1024)
+/* Length of key string */
+
 static void zhash_to_buf_and_back(void)
 {
 	int rc;
@@ -190,7 +191,7 @@ static void zhash_to_buf_and_back(void)
 	/* Allocate an empty zhash table */
 	uint32_t   index;
 	const char *key_base          = "Key";
-	char       key_full_name[32];
+	char       key_full_name[KEY_FULL_NAME_LEN ];
 	char       key_full_name_size;
 
 	/* This allocation can not fail; it if fail, the execution aborted */
@@ -276,7 +277,7 @@ static void zhash_to_buf_and_back(void)
 	DDD("Going to release the zhash tables. Also release the values. \n");
 	zhash_release(zt, 1);
 	zhash_release(zt2, 1);
-	DD("[TEST] Successfully finished zhash-to-buf and buf-to-zhash test\n");
+	PR("[TEST] Successfully finished zhash-to-buf and buf-to-zhash test\n");
 }
 
 
@@ -284,7 +285,7 @@ int main(void)
 {
 	basic_test();
 	add_one_item_test();
-	add_many_items_test();
 	zhash_to_buf_and_back();
+	add_many_items_test();
 	return 0;
 }

@@ -431,11 +431,12 @@ FATTR_WARN_UNUSED_RET ret_t basket_collapse(void *basket)
 	box_u32_t box_index;
 	TESTP_ABORT(_basket);
 	TESTP_ABORT(_basket->boxes);
+	const uint32_t minimal_number_ob_boxes = 2;
 
 	// basket_dump(basket, "Going to collapse in place");
 
 	/* We need two or more boxes to run this function */
-	if (_basket->boxes_used < 2) {
+	if (_basket->boxes_used < minimal_number_ob_boxes) {
 		return 0;
 	}
 
@@ -534,9 +535,9 @@ void basket_checksum_set(basket_send_header_t *basket_buf_header_p)
 	DDD("Checksum set: %X\n", basket_buf_header_p->checksum);
 }
 
-int basket_checksum_test(const basket_send_header_t *basket_buf_header_p)
+int8_t basket_checksum_test(const basket_send_header_t *basket_buf_header_p)
 {
-	int      rc                = -1;
+	int8_t   rc                = -1;
 	uint32_t calculated_sum    = 0XDEADBEEF;
 
 	/* We start the checksum from 'ticket',
@@ -779,11 +780,11 @@ FATTR_WARN_UNUSED_RET void *basket_from_buf(void *buf, const size_t size)
 	return basket;
 }
 
-FATTR_WARN_UNUSED_RET int box_compare_box(const void *box_left, const void *box_right)
+FATTR_WARN_UNUSED_RET int8_t box_compare_box(const void *box_left, const void *box_right)
 {
 	const box_t *_box_left  = box_left;
 	const box_t *_box_right = box_right;
-	int         memcmp_rc;
+	int8_t      memcmp_rc;
 	/* Both boxes must be either NULL or not NULL */
 	if (_box_right != NULL && _box_left == NULL) {
 		DDD("box_right != NULL && box_left == NULL\n");
@@ -815,7 +816,7 @@ FATTR_WARN_UNUSED_RET int box_compare_box(const void *box_left, const void *box_
 }
 
 /* Compare two backets, return 0 if they are equal, 1 if not, < 0 on an error */
-FATTR_WARN_UNUSED_RET int basket_compare_basket(const void *basket_right, const void *basket_left)
+FATTR_WARN_UNUSED_RET int8_t basket_compare_basket(const void *basket_right, const void *basket_left)
 {
 	const basket_t *_basket_right = basket_right;
 	const basket_t *_basket_left  = basket_left;
