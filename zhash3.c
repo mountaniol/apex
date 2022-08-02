@@ -4,7 +4,8 @@
 #include "debug.h"
 #include "tests.h"
 #include "zhash3.h"
-#include "murmur3.h"
+#include "checksum.h"
+#include "optimization.h"
 
 /* possible sizes for hash table; must be prime numbers */
 /**
@@ -20,24 +21,31 @@ static const size_t hash_sizes[] = {
 };
 
 /*** STATIC FUNCTIONS ***/
-
+FATTR_WARN_UNUSED_RET
+FATTR_HOT
 static void *zmalloc(const size_t sz)
 {
 	return calloc(1, sz);
 }
 
+FATTR_WARN_UNUSED_RET
+FATTR_CONST
 static size_t next_size_index(const size_t size_index)
 {
 	if (size_index == COUNT_OF(hash_sizes)) return (size_index);
 	return (size_index + 1);
 }
 
+FATTR_WARN_UNUSED_RET
+FATTR_CONST
 static size_t previous_size_index(const size_t size_index)
 {
 	if (size_index == 0) return (size_index);
 	return (size_index - 1);
 }
 
+FATTR_WARN_UNUSED_RET
+FATTR_HOT
 static void *zcalloc(const size_t num, const size_t size)
 {
 	void *ptr = calloc(num, size);
@@ -53,6 +61,7 @@ static void *zcalloc(const size_t num, const size_t size)
  * @return ztable_t* 
  * @details 
  */
+FATTR_WARN_UNUSED_RET
 static ztable_t *zcreate_hash_table_with_size(const size_t size_index)
 {
 	ztable_t *hash_table = zmalloc(sizeof(ztable_t));
@@ -79,6 +88,9 @@ static ztable_t *zcreate_hash_table_with_size(const size_t size_index)
  * @details BE AWARE: This is an internal function. No values
  *  		validation.
  */
+FATTR_WARN_UNUSED_RET
+FATTR_CONST
+FATTR_HOT
 static size_t zhash_entry_index_by_int(const ztable_t *hash_table, const uint64_t key_int64)
 {
 	const size_t size = hash_sizes[hash_table->size_index];
@@ -132,6 +144,7 @@ static void zhash_rehash(ztable_t *hash_table, const size_t size_index)
  * @details BE AWARE: This is an internal function. No values
  *  		validation. 
  */
+FATTR_COLD
 #ifdef DEBUG3
 void zhash_dump(const ztable_t *hash_table, const char *name)
 #else
@@ -180,6 +193,7 @@ void zhash_dump(const ztable_t *hash_table, __attribute__((unused))const char *n
  * @details BE AWARE: This is an internal function. No values
  *  		validation.
  */
+FATTR_HOT
 static void zentry_t_fill(zentry_t *entry, uint64_t key_int64,
 						  void *val,
 						  const size_t val_size,
@@ -194,6 +208,8 @@ static void zentry_t_fill(zentry_t *entry, uint64_t key_int64,
 	entry->next = NULL;
 }
 
+FATTR_WARN_UNUSED_RET
+FATTR_HOT
 static zentry_t *zentry_t_alloc(uint64_t key_int64, void *val, size_t val_size, char *key_str, size_t key_str_len)
 {
 	zentry_t *entry = zmalloc(sizeof(zentry_t));
@@ -240,6 +256,8 @@ static void zentry_t_release(zentry_t *entry, const bool recursive, const int fo
  * @details BE AWARE: Collisions are possible. Since 64 bits valus is used, the collision
  *          probability is low but possible. Always test the return value for collision situation.
  */
+FATTR_WARN_UNUSED_RET
+FATTR_HOT
 static int zhash_insert(ztable_t *hash_table,
 						uint64_t key_int64,
 						char *key_str,
@@ -286,6 +304,8 @@ static int zhash_insert(ztable_t *hash_table,
  *  	   failure.
  * @details 
  */
+FATTR_WARN_UNUSED_RET
+FATTR_CONST
 static zentry_t     *zhash_find_entry_by_int(const ztable_t *hash_table, const uint64_t key_int64)
 {
 	zentry_t     *entry;
@@ -319,17 +339,19 @@ static zentry_t     *zhash_find_entry_by_int(const ztable_t *hash_table, const u
  * @return void* Pointer to the entry, NULL on error
  * @details 
  */
+FATTR_WARN_UNUSED_RET
+FATTR_CONST
 static void *zhash_entry_find_by_str(const ztable_t *hash_table, char *key_str, const size_t key_str_len)
 {
 	uint64_t key_int64 = zhash_key_int64_from_key_str(key_str, key_str_len);
 	DDD("Calculated key_int: %lX\n", key_int64);
 	return zhash_find_entry_by_int(hash_table, key_int64);
-
 }
 
 
 /*** END OF STATIC FUNCTIONS ***/
 
+FATTR_WARN_UNUSED_RET
 ztable_t *zhash_allocate(void)
 {
 	return (zcreate_hash_table_with_size(0));
@@ -355,6 +377,9 @@ void zhash_release(ztable_t *hash_table, const int force_values_clean)
 	zfree(hash_table);
 }
 
+FATTR_WARN_UNUSED_RET
+FATTR_CONST
+FATTR_HOT
 uint64_t zhash_key_int64_from_key_str(const char *key_str, const size_t key_str_len)
 {
 	uint64_t key_int64 = 0;
@@ -362,16 +387,23 @@ uint64_t zhash_key_int64_from_key_str(const char *key_str, const size_t key_str_
 		DE("Wrong arguments: key_str = %p, key_str_len = %zu\n", key_str, key_str_len);
 		abort();
 	}
-	MurmurHash3_x86_128_to_64(key_str, key_str_len, ZHASH_MURMUR_SEED, &key_int64);
+	
+	if (0 != checksum_buf_to_32_bit(key_str, key_str_len, &key_int64)) {
+		DE("Could not calculate the 64 bit key\n");
+		abort();
+	}
 	return key_int64;
 }
 
-
+FATTR_WARN_UNUSED_RET
+FATTR_HOT
 int zhash_insert_by_int(ztable_t *hash_table, uint64_t int_key, void *val, size_t val_size)
 {
 	return zhash_insert(hash_table, int_key, NULL, 0, val, val_size);
 }
 
+FATTR_WARN_UNUSED_RET
+FATTR_HOT
 int zhash_insert_by_str(ztable_t *hash_table,
 						char *key_str,
 						const size_t key_str_len,
@@ -389,6 +421,8 @@ int zhash_insert_by_str(ztable_t *hash_table,
 	return zhash_insert(hash_table, key_int64, key_str_copy, key_str_len, val, val_size);
 }
 
+FATTR_WARN_UNUSED_RET
+FATTR_HOT
 void *zhash_find_by_int(const ztable_t *hash_table, uint64_t key_int64, ssize_t *val_size)
 {
 	zentry_t     *entry;
@@ -407,6 +441,8 @@ void *zhash_find_by_int(const ztable_t *hash_table, uint64_t key_int64, ssize_t 
 }
 
 /* TODO: Convert string to int and search by  int */
+FATTR_WARN_UNUSED_RET
+FATTR_HOT
 void *zhash_find_by_str(const ztable_t *hash_table, char *key_str, const size_t key_str_len, ssize_t *val_size)
 {
 	uint64_t key_int64 = zhash_key_int64_from_key_str(key_str, key_str_len);
@@ -415,6 +451,8 @@ void *zhash_find_by_str(const ztable_t *hash_table, char *key_str, const size_t 
 
 }
 
+FATTR_WARN_UNUSED_RET
+FATTR_HOT
 void *zhash_extract_by_int(ztable_t *hash_table, const uint64_t key_int64, ssize_t *out_size)
 {
 	size_t       size;
@@ -455,12 +493,17 @@ void *zhash_extract_by_int(ztable_t *hash_table, const uint64_t key_int64, ssize
 	return (val);
 }
 
+FATTR_WARN_UNUSED_RET
+FATTR_HOT
 void *zhash_extract_by_str(ztable_t *hash_table, const char *key_str, const size_t key_str_len, ssize_t *size)
 {
 	const uint64_t key_int64 = zhash_key_int64_from_key_str(key_str, key_str_len);
 	return zhash_extract_by_int(hash_table, key_int64, size);
 }
 
+FATTR_WARN_UNUSED_RET
+FATTR_CONST
+FATTR_HOT
 bool zhash_exists_by_int(const ztable_t *hash_table, const uint64_t key_int64)
 {
 	zentry_t     *entry;
@@ -475,6 +518,9 @@ bool zhash_exists_by_int(const ztable_t *hash_table, const uint64_t key_int64)
 	return false;
 }
 
+FATTR_WARN_UNUSED_RET
+FATTR_CONST
+FATTR_HOT
 bool zhash_exists_by_str(ztable_t *hash_table, const char *key_str, size_t key_str_len)
 {
 	const uint64_t key_int64 = zhash_key_int64_from_key_str(key_str, strnlen(key_str, key_str_len));
@@ -483,7 +529,8 @@ bool zhash_exists_by_str(ztable_t *hash_table, const char *key_str, size_t key_s
 
 /*** Iterate all items in hash ***/
 
-
+FATTR_WARN_UNUSED_RET
+FATTR_COLD
 zentry_t *zhash_list(const ztable_t *hash_table, size_t *index, const zentry_t *entry)
 {
 	size_t   size;
@@ -516,7 +563,8 @@ zentry_t *zhash_list(const ztable_t *hash_table, size_t *index, const zentry_t *
 
 /*** ADDITION: ZHASH TO BUF / BUF TO ZHASH ***/
 
-
+FATTR_WARN_UNUSED_RET
+FATTR_CONST
 size_t zhash_to_buf_allocation_size(const ztable_t *hash_table)
 {
 	/* We need one header for the whole buffer */
@@ -541,6 +589,7 @@ size_t zhash_to_buf_allocation_size(const ztable_t *hash_table)
 	return size;
 }
 
+FATTR_WARN_UNUSED_RET
 void *zhash_to_buf(const ztable_t *hash_table, size_t *size)
 {
 	size_t         index;
@@ -610,8 +659,10 @@ void *zhash_to_buf(const ztable_t *hash_table, size_t *size)
 	return buf;
 }
 
+FATTR_WARN_UNUSED_RET
 ztable_t *zhash_from_buf(const char *buf, const size_t size)
 {
+	int rc;
 	size_t               index;
 	size_t               offset = 0;
 	const zhash_header_t *zhead = (zhash_header_t *)buf;
@@ -653,7 +704,15 @@ ztable_t *zhash_from_buf(const char *buf, const size_t size)
 		DDD("Inserting: zt = %p, zent->key_int64 = %lX, key_str = |%s|, zent->key_str_len = %u, val = %p, zent->val_size = %u\n",
 			zt, zent->key_int64, key_str, zent->key_str_len, val, zent->val_size);
 
-		zhash_insert(zt, zent->key_int64, key_str, zent->key_str_len, val, zent->val_size);
+		rc = zhash_insert(zt, zent->key_int64, key_str, zent->key_str_len, val, zent->val_size);
+		if (rc < 0) {
+			DE("Error on a new entry insert (extracted frpm buf) into new zhash\n");
+			abort();
+		}
+		if (rc > 0) {
+			DE("Collision on a new entry insert (extracted frpm buf) into new zhash\n");
+			abort();
+		}
 	}
 
 	DDD("Offset: %lu, size : %zu\n", offset, size);
@@ -670,6 +729,8 @@ ztable_t *zhash_from_buf(const char *buf, const size_t size)
 }
 
 /* Compare two zhash buffers */
+FATTR_WARN_UNUSED_RET
+FATTR_COLD
 int zhash_cmp_zhash(const ztable_t *left, const ztable_t *right)
 {
 

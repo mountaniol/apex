@@ -6,6 +6,7 @@
 #include "box_t.h"
 #include "debug.h"
 #include "tests.h"
+#include "checksum.h"
 #include "optimization.h"
 
 static ret_t box_new_from_data_by_index(void *basket, box_u32_t box_index, const void *buffer, const box_u32_t buffer_size);
@@ -512,7 +513,58 @@ static void basket_fill_send_header_from_basket_t(basket_send_header_t *basket_b
 	}
 
 	/* TODO: The checksum not implemented yet */
-	basket_buf_header_p->basket_checksum = 0;
+	basket_buf_header_p->checksum = 0;
+}
+
+void basket_checksum_set(basket_send_header_t *basket_buf_header_p)
+{
+	/* We start the checksum from 'ticket',
+	   we do not consider watermark and the checksum fields */
+	size_t start_offset      = offsetof(basket_send_header_t, ticket);
+	/* Size to count - the size of this buffer less two filelds, 'watermark' and 'checksum' */
+	size_t size_to_count     = basket_buf_header_p->total_len - start_offset;
+	/* Start from 'ticket' field */
+	char   *address_to_start = (char *)basket_buf_header_p + start_offset;
+
+	if (0 != checksum_buf_to_32_bit(address_to_start, size_to_count, &basket_buf_header_p->checksum)) {
+		DE("Failed to calculate the final buffer checksum");
+		abort();
+	}
+
+	DDD("Checksum set: %X\n", basket_buf_header_p->checksum);
+}
+
+int basket_checksum_test(const basket_send_header_t *basket_buf_header_p)
+{
+	int      rc                = -1;
+	uint32_t calculated_sum    = 0XDEADBEEF;
+
+	/* We start the checksum from 'ticket',
+		we do not consider watermark and the checksum fields */
+	size_t   start_offset      = 0;
+	/* Size to count - the size of this buffer less two filelds, 'watermark' and 'checksum' */
+	size_t   size_to_count     = 0;
+	/* Start from 'ticket' field */
+	char     *address_to_start = NULL;
+
+	TESTP(basket_buf_header_p, -1);
+
+	start_offset      = offsetof(basket_send_header_t, ticket);
+	size_to_count     = basket_buf_header_p->total_len - start_offset;
+	address_to_start = (char *)basket_buf_header_p + start_offset;
+
+	rc = checksum_buf_to_32_bit(address_to_start, size_to_count, &calculated_sum);
+
+	if (0 != rc) {
+		DE("Failed to calculate the final buffer checksum");
+		abort();
+	}
+
+	if (basket_buf_header_p->checksum != calculated_sum) {
+		DE("Wrong checksum: expected %X but it is %X\n", basket_buf_header_p->checksum, calculated_sum);
+		return 1;
+	}
+	return 0;
 }
 
 /**
@@ -541,9 +593,6 @@ FATTR_WARN_UNUSED_RET static size_t basket_fill_send_box_from_box_t(box_dump_t *
 
 	box_dump_header_p->box_size = box_used;
 	box_dump_header_p->watermark = WATERMARK_BOX;
-
-	/* TODO */
-	box_dump_header_p->box_checksum = 0;
 
 	// memcpy(buf + buf_offset, &box_dump_header, sizeof(box_dump_t));
 	buf_offset += sizeof(box_dump_t);
@@ -621,6 +670,10 @@ FATTR_WARN_UNUSED_RET void *basket_to_buf(const void *basket, size_t *size)
 		buf_offset += zsize;
 	}
 
+	/* Calculate and set the buffer checksum */
+	/* This call can not fail; on failure the execution will be terminated */
+	basket_checksum_set(basket_buf_header_p);
+
 	DDD("Returning buffer, size: %zu, counted offset is: %zu\n", buf_size, buf_offset);
 	*size = buf_size;
 	return buf;
@@ -649,6 +702,13 @@ FATTR_WARN_UNUSED_RET void *basket_from_buf(void *buf, const size_t size)
 		DE("Wrong buffer: wrong watermark. Expected %X but it is %X\n", WATERMARK_BASKET, basket_buf_header->watermark);
 		ABORT_OR_RETURN(NULL);
 	}
+
+	/* Test the buffer checksum */
+	if (0 != basket_checksum_test(basket_buf_header)) {
+		DE("A wrong buffer, checksum not match\n");
+		return NULL;
+	}
+
 
 	basket = basket_new();
 	TESTP(basket, NULL);

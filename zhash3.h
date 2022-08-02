@@ -13,9 +13,6 @@
 #define COUNT_OF(arr) (sizeof(arr) / sizeof(*arr))
 #define zfree free
 
-/* Used for Murmur calculation */
-#define ZHASH_MURMUR_SEED (17)
-
 /* This is the max length of the String Key;
    we expect no key will exceeds it */
 #define ZHASH_STRING_KEY_MAX_LEN (64)

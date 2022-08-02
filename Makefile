@@ -23,7 +23,7 @@ DEBUG=-DDERROR3 -DDEBUG2 -ggdb -DABORT_ON_ERROR -DDEBUG3 #-DENABLE_BOX_DUMP
 #CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DFIFO_DEBUG -DDEBUG3 -I$(MOSQ_INC) -I./ -I./zhash
 CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DFIFO_DEBUG
 
-ZHASH_O=zhash3.o murmur3.o
+ZHASH_O=zhash3.o murmur3.o checksum.o
 ZHASH_A=zhash3.a
 
 ZHASH_TEST_O= zhash3_test.o $(ZHASH_O)
