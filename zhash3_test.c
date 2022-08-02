@@ -49,6 +49,7 @@ static void basic_test(void)
 /* Create and release an empty zhash table */
 static void add_one_item_test(void)
 {
+	int rc;
 	/* Allocate an empty zhash table */
 	ssize_t val_size;
 	ztable_t *zt       = zllocate_empty_zhash();
@@ -64,7 +65,18 @@ static void add_one_item_test(void)
 	memset(item, ONE_ITEM_SIZE_PATTERN, ONE_ITEM_SIZE);
 
 	/* Add item into the hash */
-	zhash_insert_by_str(zt, ONE_ITEM_SIZE_KEY_STR, strlen(ONE_ITEM_SIZE_KEY_STR), item, ONE_ITEM_SIZE);
+	rc = zhash_insert_by_str(zt, ONE_ITEM_SIZE_KEY_STR, strlen(ONE_ITEM_SIZE_KEY_STR), item, ONE_ITEM_SIZE);
+
+	if (rc < 0) {
+		DE("Error: returned status < 0, aborting\n");
+		abort();
+	}
+
+	if (rc > 0) {
+		DE("Collision: the key %s can not be inserted because of collision\n", ONE_ITEM_SIZE_KEY_STR);
+		abort();
+	}
+
 	DDD("Inserted item: %p\n", item);
 
 	/* Try to extract the item by the key */
@@ -76,7 +88,7 @@ static void add_one_item_test(void)
 		abort();
 	}
 	if (val_size != ONE_ITEM_SIZE) {
-		DE("[TEST] Wrong size returned: expected %zd but it is %zd\n", ONE_ITEM_SIZE, val_size);
+		DE("[TEST] Wrong size returned: expected %d but it is %zd\n", ONE_ITEM_SIZE, val_size);
 		abort();
 	}
 
@@ -91,9 +103,10 @@ static void add_one_item_test(void)
 }
 
 /* How many items to add into hash */
-#define NUMBER_OF_ITEMS (1024 * 2048)
+#define NUMBER_OF_ITEMS (1024 * 1024 * 10)
 static void add_many_items_test(void)
 {
+	int rc;
 	ssize_t val_size;
 	/* Allocate an empty zhash table */
 	uint32_t   index;
@@ -104,6 +117,8 @@ static void add_many_items_test(void)
 	/* This allocation can not fail; it if fail, the execution aborted */
 	ztable_t   *zt                = zllocate_empty_zhash();
 
+	DD("[TEST] Strting a long and intensive test of adding %d items into zhash\n", NUMBER_OF_ITEMS);
+
 	for (index = 0; index < NUMBER_OF_ITEMS; index++) {
 		void *item     = malloc(ONE_ITEM_SIZE);
 		void *item_ret = NULL;
@@ -113,13 +128,29 @@ static void add_many_items_test(void)
 			abort();
 		}
 
+		if (0 == (index % (1024 * 100))) {
+				PR("\rAdding %d / %d  (%.3f %%) \r", index, NUMBER_OF_ITEMS, (double)index/(NUMBER_OF_ITEMS) *100 );
+		}
+
 		/* Fill the item with the pattern */
-		memset(item, ONE_ITEM_SIZE_PATTERN, ONE_ITEM_SIZE);
+		memset(item, 0, ONE_ITEM_SIZE);
 
 		key_full_name_size = sprintf(key_full_name, "%s_%u", key_base, index);
+		memcpy(item, key_full_name, key_full_name_size);
 
 		/* Add item into the hash */
-		zhash_insert_by_str(zt, key_full_name, key_full_name_size, item, ONE_ITEM_SIZE);
+		rc = zhash_insert_by_str(zt, key_full_name, key_full_name_size, item, ONE_ITEM_SIZE);
+		if (rc < 0) {
+			DE("Error: returned status < 0, aborting\n");
+			abort();
+		}
+
+		if (rc > 0) {
+			item_ret = zhash_find_by_str(zt, key_full_name, key_full_name_size, &val_size);
+			DE("Collision: the key %s can not be inserted because of collision with: %s\n", key_full_name, (char *)item_ret);
+			abort();
+		}
+
 		DDD("Inserted item: %p\n", item);
 
 		/* Try to extract the item by the key */
@@ -132,7 +163,7 @@ static void add_many_items_test(void)
 		}
 
 		if (val_size != ONE_ITEM_SIZE) {
-			DE("[TEST] Wrong size returned: expected %zd but it is %zd\n", ONE_ITEM_SIZE, val_size);
+			DE("[TEST] Wrong size returned: expected %d but it is %zd\n", ONE_ITEM_SIZE, val_size);
 			abort();
 		}
 
@@ -145,7 +176,7 @@ static void add_many_items_test(void)
 	}
 
 	zhash_release(zt, 1);
-	DD("[TEST] Successfully finished basic test\n");
+	DD("[TEST] Congrats! Successfully finished the stressed zhash\n");
 }
 
 
@@ -154,6 +185,7 @@ static void add_many_items_test(void)
 #define NUMBER_OF_ITEMS_ZHASH_TO_BUF (1024)
 static void zhash_to_buf_and_back(void)
 {
+	int rc;
 	ssize_t val_size;
 	/* Allocate an empty zhash table */
 	uint32_t   index;
@@ -178,12 +210,24 @@ static void zhash_to_buf_and_back(void)
 		}
 
 		/* Fill the item with the pattern */
-		memset(item, ONE_ITEM_SIZE_PATTERN, ONE_ITEM_SIZE);
-
+		memset(item, 0, ONE_ITEM_SIZE);
 		key_full_name_size = sprintf(key_full_name, "%s_%u", key_base, index);
+		memcpy(item, key_full_name, key_full_name_size);
 
 		/* Add item into the hash */
-		zhash_insert_by_str(zt, key_full_name, key_full_name_size, item, ONE_ITEM_SIZE);
+		rc = zhash_insert_by_str(zt, key_full_name, key_full_name_size, item, ONE_ITEM_SIZE);
+
+		if (rc < 0) {
+			DE("Error: returned status < 0, aborting\n");
+			abort();
+		}
+
+		if (rc > 0) {
+			item_ret = zhash_find_by_str(zt, key_full_name, key_full_name_size, &val_size);
+			DE("Collision: the key %s can not be inserted because of collision with: %s\n", key_full_name, (char *)item);
+			abort();
+		}
+
 		DDD("Inserted item: %p\n", item);
 
 		/* Try to extract the item by the key */
@@ -196,7 +240,7 @@ static void zhash_to_buf_and_back(void)
 		}
 
 		if (val_size != ONE_ITEM_SIZE) {
-			DE("[TEST] Wrong size returned: expected %zd but it is %zd\n", ONE_ITEM_SIZE, val_size);
+			DE("[TEST] Wrong size returned: expected %d but it is %zd\n", ONE_ITEM_SIZE, val_size);
 			abort();
 		}
 

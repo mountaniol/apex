@@ -388,7 +388,7 @@ uint64_t zhash_key_int64_from_key_str(const char *key_str, const size_t key_str_
 		abort();
 	}
 	
-	if (0 != checksum_buf_to_32_bit(key_str, key_str_len, &key_int64)) {
+	if (0 != checksum_buf_to_64_bit(key_str, key_str_len, &key_int64)) {
 		DE("Could not calculate the 64 bit key\n");
 		abort();
 	}
@@ -412,6 +412,7 @@ int zhash_insert_by_str(ztable_t *hash_table,
 {
 	char     *key_str_copy;
 	uint64_t key_int64     = zhash_key_int64_from_key_str(key_str, key_str_len);
+	
 	DDD("Calculated key_int: %lX\n", key_int64);
 	key_str_copy = strndup(key_str, key_str_len);
 	if (NULL == key_str_copy) {
@@ -528,7 +529,6 @@ bool zhash_exists_by_str(ztable_t *hash_table, const char *key_str, size_t key_s
 }
 
 /*** Iterate all items in hash ***/
-
 FATTR_WARN_UNUSED_RET
 FATTR_COLD
 zentry_t *zhash_list(const ztable_t *hash_table, size_t *index, const zentry_t *entry)
@@ -562,7 +562,6 @@ zentry_t *zhash_list(const ztable_t *hash_table, size_t *index, const zentry_t *
 }
 
 /*** ADDITION: ZHASH TO BUF / BUF TO ZHASH ***/
-
 FATTR_WARN_UNUSED_RET
 FATTR_CONST
 size_t zhash_to_buf_allocation_size(const ztable_t *hash_table)

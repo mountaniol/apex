@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "optimization.h"
 
 /* hash table
  * keys are strings or integers
@@ -17,6 +18,8 @@
    we expect no key will exceeds it */
 #define ZHASH_STRING_KEY_MAX_LEN (64)
 
+/* If we use 32 bit integer for key, the collision probability is high.
+   My tests show that the first collision happens after 1,187,966 items inserted into zhash */
 typedef struct {
 	char *key_str; /**< String key representation */
 	uint32_t key_str_len; /**< Length of the key string */
@@ -101,6 +104,7 @@ zhash_entry_t;
  * @return ztable_t* Pointer to new hash table on success, NULL on error
  * @details
  */
+FATTR_WARN_UNUSED_RET
 ztable_t *zhash_allocate(void);
 
 /**
@@ -133,6 +137,8 @@ void zhash_release(ztable_t *hash_table, const int force_values_clean);
  *  		The zhash does not use user's string,
  *  		and the caller can release the string after call.
  */
+FATTR_WARN_UNUSED_RET
+FATTR_HOT
 int zhash_insert_by_str(ztable_t *hash_table,
 						char *key_str,
 						const size_t key_str_len,
@@ -152,6 +158,8 @@ int zhash_insert_by_str(ztable_t *hash_table,
  * @return void* Pointer to data kept in the hash table, NULL if not found
  * @details The found entry will be not released
  */
+FATTR_WARN_UNUSED_RET
+FATTR_HOT
 void *zhash_find_by_str(const ztable_t *hash_table, char *key_str, const size_t key_str_len, ssize_t *val_size);
 
 /**
@@ -167,6 +175,8 @@ void *zhash_find_by_str(const ztable_t *hash_table, char *key_str, const size_t 
  * @return void* Data kept in hash table, NULL if not found
  * @details This function removes the found entry from the hash and returns data to caller
  */
+FATTR_WARN_UNUSED_RET
+FATTR_HOT
 void *zhash_extract_by_str(ztable_t *hash_table, const char *key_str, const size_t key_str_len, ssize_t *size);
 
 /**
@@ -180,6 +190,9 @@ void *zhash_extract_by_str(ztable_t *hash_table, const char *key_str, const size
  * @return bool True if a record for the given key presens, false if doesnt
  * @details
  */
+FATTR_WARN_UNUSED_RET
+FATTR_CONST
+FATTR_HOT
 bool zhash_exists_by_str(ztable_t *hash_table, const char *key_str, size_t key_str_len);
 
 /* Set of function where the key is an integer */
@@ -193,6 +206,9 @@ bool zhash_exists_by_str(ztable_t *hash_table, const char *key_str, size_t key_s
  * @details BE AWARE: This is an internal function. No values
  *  		validation.
  */
+FATTR_WARN_UNUSED_RET
+FATTR_CONST
+FATTR_HOT
 uint64_t zhash_key_int64_from_key_str(const char *key_str, const size_t key_str_len);
 
 
@@ -206,6 +222,8 @@ uint64_t zhash_key_int64_from_key_str(const char *key_str, const size_t key_str_
  * @return 0 if inserted, 1 if there is a collision, -1 on an error
  * @details
  */
+FATTR_WARN_UNUSED_RET
+FATTR_HOT
 int zhash_insert_by_int(ztable_t *hash_table, uint64_t int_key, void *val, size_t val_size);
 
 /**
@@ -221,6 +239,8 @@ int zhash_insert_by_int(ztable_t *hash_table, uint64_t int_key, void *val, size_
  * @return void* A pointer to data kept in the hash table, NULL if not found
  * @details The found entry will be deleted from the table
  */
+FATTR_WARN_UNUSED_RET
+FATTR_HOT
 void *zhash_find_by_int(const ztable_t *hash_table, uint64_t key_int64, ssize_t *val_size);
 
 /**
@@ -234,6 +254,8 @@ void *zhash_find_by_int(const ztable_t *hash_table, uint64_t key_int64, ssize_t 
  * @return void* Data kept in hash table, NULL if not found
  * @details This function removes the found entry from the hash and returns data to caller
  */
+FATTR_WARN_UNUSED_RET
+FATTR_HOT
 void *zhash_extract_by_int(ztable_t *hash_table, const uint64_t key_int64, ssize_t *size);
 
 /**
@@ -246,6 +268,9 @@ void *zhash_extract_by_int(ztable_t *hash_table, const uint64_t key_int64, ssize
  * @return bool True if the a record for the given key presens, false if doesnt
  * @details
  */
+FATTR_WARN_UNUSED_RET
+FATTR_CONST
+FATTR_HOT
 bool zhash_exists_by_int(const ztable_t *hash_table, const uint64_t key_int64);
 
 /**
@@ -264,6 +289,8 @@ bool zhash_exists_by_int(const ztable_t *hash_table, const uint64_t key_int64);
  * @details Be careful! This function return zentry_t! You
  *  				should use entry->val to get the value saved in hash
  */
+FATTR_WARN_UNUSED_RET
+FATTR_COLD
 zentry_t *zhash_list(const ztable_t *hash_table, size_t *index, const zentry_t *entry);
 
 /**
@@ -274,6 +301,8 @@ zentry_t *zhash_list(const ztable_t *hash_table, size_t *index, const zentry_t *
  * @return size_t Size of needded buffer, in bytes
  * @details 
  */
+FATTR_WARN_UNUSED_RET
+FATTR_CONST
 size_t zhash_to_buf_allocation_size(const ztable_t *hash_table);
 
 /**
@@ -289,6 +318,8 @@ size_t zhash_to_buf_allocation_size(const ztable_t *hash_table);
  * @details The original zhash not affected by this operation,
  *  		you can use it or release it, by your choice.
  */
+
+FATTR_WARN_UNUSED_RET
 extern void *zhash_to_buf(const ztable_t *hash_table, size_t *size);
 
 /**
@@ -303,6 +334,7 @@ extern void *zhash_to_buf(const ztable_t *hash_table, size_t *size);
  *  	   NULL on an error.
  * @details 
  */
+FATTR_WARN_UNUSED_RET
 extern ztable_t *zhash_from_buf(const char *buf, const size_t size);
 
 
@@ -315,6 +347,8 @@ extern ztable_t *zhash_from_buf(const char *buf, const size_t size);
  *  	   not equal
  * @details 
  */
+FATTR_WARN_UNUSED_RET
+FATTR_COLD
 extern int zhash_cmp_zhash(const ztable_t *left, const ztable_t *right);
 
 #ifdef DEBUG3
