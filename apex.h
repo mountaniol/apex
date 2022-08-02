@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include "list.h"
-#include "zhash2.h"
+#include "zhash3.h"
 
 /* This macro defines how many file descriptors are allocated each time
    we need to grow it */

@@ -26,10 +26,10 @@ CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DFIFO_DEBUG
 FNV_HASH_O=fnv/hash_32a.o fnv/hash_32.o fnv/hash_64a.o fnv/hash_64.o
 FNV_HASH_A=fnv_hash.a
 
-ZHASH_O=zhash3.o murmur3.o checksum.o
+ZHASH_O=zhash3.o murmur3.o checksum.o $(FNV_HASH_O)
 ZHASH_A=zhash3.a
 
-ZHASH_TEST_O= zhash3_test.o $(ZHASH_O) $(FNV_HASH_O)
+ZHASH_TEST_O= zhash3_test.o $(ZHASH_O)
 ZHASH_TEST_T=zhash3_test.out
 
 BUFT_O=box_t.o box_t_memory.o
@@ -42,7 +42,7 @@ BASKET_TEST_O=basket_test.o $(BASKET_O)
 BASKET_TEST_T=test_basket.out
 
 # The library example 
-APEX_O=apex.o zhash2.o list.o
+APEX_O=apex.o $(ZHASH_O)
 APEX_T=apex.out
 
 all: apex
