@@ -36,6 +36,6 @@ jobs:
           echo test, and deploy your project.
           make clean test_basket
           make clean test_zhash
-          ./test_basket
+          ./test_basket.out
           ./zhash3_test.out
           
