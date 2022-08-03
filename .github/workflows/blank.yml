@@ -25,22 +25,18 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v3
 
-      - name: Run a one-line script
-        run: echo Hello, world!
+      - name: Install environment
+        run: sudo apt install build-essential
 
-      # Build the Basket Test
       - name: Build Basket test
-        run: make clean test_basket
+        run: cd $GITHUB_WORKSPACE ; make clean test_basket
 
-	  # Run the Basket Test
       - name: Run Basket Test
-        run: ./test_basket.out
+        run: $GITHUB_WORKSPACE ; ./test_basket.out
 
-	  # Build the Zhash Test
       - name: Build zhash test
-        run: make clean test_zhash
+        run: $GITHUB_WORKSPACE ; make clean test_zhash
 
-	  # Run the Zhash Test
       - name: Run Zhash Test
-        run: ./zhash3_test.out
+        run: $GITHUB_WORKSPACE ; ./zhash3_test.out
           
