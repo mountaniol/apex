@@ -31,7 +31,7 @@ jobs:
 
       # Runs a set of commands using the runners shell
       - name: Build Basket test
-      -  run: make clean test_basket
+      - run: make clean test_basket
 
 	  # Run the test
 	  - name: Run Basket Test
