@@ -28,15 +28,18 @@ jobs:
       - name: Install environment
         run: sudo apt install build-essential
 
-      - name: Build Basket test
-        run: cd $GITHUB_WORKSPACE ; make clean test_basket
+      - name: Got to the project directory
+        run: cd $GITHUB_WORKSPACE
+
+      - name: Clean all
+        run: make clean
+
+      - name: Build Basket and Zhash tests
+        run: make test_basket test_zhash
 
       - name: Run Basket Test
-        run: $GITHUB_WORKSPACE ; ./test_basket.out
-
-      - name: Build zhash test
-        run: $GITHUB_WORKSPACE ; make clean test_zhash
+        run: ./test_basket.out
 
       - name: Run Zhash Test
-        run: $GITHUB_WORKSPACE ; ./zhash3_test.out
+        run: ./zhash3_test.out
           
