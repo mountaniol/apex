@@ -35,11 +35,11 @@ jobs:
         run: make clean
 
       - name: Build Basket and Zhash tests
-        run: make test_basket test_zhash
+        run: make tests
 
       - name: Run Basket Test
         run: ./test_basket.out
 
       - name: Run Zhash Test
-        run: ./zhash3_test.out
+        run: ./test_zhash3.out
           
