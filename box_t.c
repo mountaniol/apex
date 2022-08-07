@@ -66,8 +66,8 @@ void bx_dump(const box_t *box, const char *mes)
 	}
 
 	DD("box_t data ptr:       %p\n", bx_data_take(box));
-	DD("box_t used:           %ld\n", bx_used_take(box));
-	DD("box_t room:           %ld\n", bx_room_take(box));
+	DD("box_t used:           %lld\n", bx_used_take(box));
+	DD("box_t room:           %lld\n", bx_room_take(box));
 	DD("========================\n");
 }
 #else
@@ -104,7 +104,7 @@ void bx_used_dec(box_t *box, const box_s64_t dec)
 {
 	TESTP_ABORT(box);
 	if (dec > bx_used_take(box)) {
-		DE("Tried to decrement 'box->used' such that it will be < 0: current %zu, asked decrement %zu\n",
+		DE("Tried to decrement 'box->used' such that it will be < 0: current %ld, asked decrement %ld\n",
 		   box->room, dec);
 		TRY_ABORT();
 	}
@@ -112,7 +112,7 @@ void bx_used_dec(box_t *box, const box_s64_t dec)
 	if (box->used >= dec) {
 		box->used -= dec;
 	} else {
-		DE("Tried to decrement 'box->used' such that it will be < 0: current %zu, asked decrement %zu\n",
+		DE("Tried to decrement 'box->used' such that it will be < 0: current %ld, asked decrement %ld\n",
 		   box->room, dec);
 		TRY_ABORT();
 		box->used = 0;
@@ -130,14 +130,14 @@ box_s64_t bx_room_take(const box_t *box)
 void bx_room_set(box_t *box, const box_s64_t room)
 {
 	TESTP_ABORT(box);
-	DDD("Setting box room: %ld\n", room);
+	DDD("Setting box room: %lld\n", room);
 	box->room = room;
 }
 
 void bx_room_inc(box_t *box, const box_s64_t inc)
 {
 	TESTP_ABORT(box);
-	DDD("Inc box room: %ld + %ld\n", box->room, inc);
+	DDD("Inc box room: %lld + %lld\n", box->room, inc);
 	box->room += inc;
 }
 
@@ -149,7 +149,7 @@ void bx_room_dec(box_t *box, const box_s64_t dec)
 		TRY_ABORT();
 	}
 
-	DDD("Dec box room: %ld - %ld\n", box->room, dec);
+	DDD("Dec box room: %lld - %lld\n", box->room, dec);
 
 	if (box->room >= dec) {
 		box->room -= dec;
@@ -299,7 +299,7 @@ FATTR_WARN_UNUSED_RET static ret_t bx_realloc(box_t *box, const size_t new_size)
 	//DDD("Allocated size %zu\n", new_size);
 
 	if (NULL == tmp) {
-		DE("New memory alloc failed: current size = %zu, asked size = %zu\n", box->room, new_size);
+		DE("New memory alloc failed: current size = %ld, asked size = %zu\n", box->room, new_size);
 		ABORT_OR_RETURN(-ENOMEM);
 	}
 
@@ -429,7 +429,7 @@ FATTR_WARN_UNUSED_RET ret_t bx_clean_and_reset(box_t *box)
 
 	if (box->data) {
 		/* Security: zero memory before it freed */
-		DDD("Cleaning before free, data %p, size %ld\n", box->data, bx_room_take(box));
+		DDD("Cleaning before free, data %p, size %lld\n", box->data, bx_room_take(box));
 		memset(box->data, 0, bx_room_take(box));
 		free(box->data);
 		box->data = NULL;

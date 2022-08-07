@@ -192,7 +192,7 @@ FATTR_WARN_UNUSED_RET ret_t basket_clean(void *basket)
 
 	/* Validity test 1 */
 	if (NULL == _basket->boxes && _basket->boxes_used > 0) {
-		DE("Error: if number of boxes > 0 (%d), the boxes array must not be NULL pointer, but it is\n", _basket->boxes_used);
+		DE("Error: if number of boxes > 0 (%u), the boxes array must not be NULL pointer, but it is\n", _basket->boxes_used);
 		abort();
 	}
 
@@ -498,9 +498,6 @@ static void basket_fill_send_header_from_basket_t(basket_send_header_t *basket_b
 	basket_buf_header_p->total_len = buf_size;
 	basket_buf_header_p->boxes_num = basket->boxes_used;
 
-	basket_buf_header_p->total_len = buf_size;
-	basket_buf_header_p->boxes_num = basket->boxes_used;
-
 	/* Watermark: a predefined pattern. */
 	basket_buf_header_p->watermark = WATERMARK_BASKET;
 
@@ -605,7 +602,7 @@ FATTR_WARN_UNUSED_RET static size_t basket_fill_send_box_from_box_t(box_dump_t *
 	box_data = bx_data_take(box);
 
 	if (NULL == box_data) {
-		DE("Critical error: box data == NULL but box->used > 0 (%d)\n", box_dump_header_p->box_size);
+		DE("Critical error: box data == NULL but box->used > 0 (%u)\n", box_dump_header_p->box_size);
 		abort();
 	}
 
@@ -625,7 +622,6 @@ FATTR_WARN_UNUSED_RET void *basket_to_buf(const void *basket, size_t *size)
 	size_t               buf_offset           = 0;
 
 	basket_send_header_t *basket_buf_header_p;
-	box_dump_t           *box_dump_header_p;
 
 	TESTP_ABORT(_basket);
 	TESTP_ABORT(size);
@@ -654,8 +650,8 @@ FATTR_WARN_UNUSED_RET void *basket_to_buf(const void *basket, size_t *size)
 	/* Now we run on array of boxes, and add one by one to the buffer */
 
 	for (box_index = 0; box_index < _basket->boxes_used; box_index++) {
-		const box_t *box      = basket_get_box(_basket, box_index);
-		box_dump_header_p = (box_dump_t *)(buf + buf_offset);
+		const box_t *box               = basket_get_box(_basket, box_index);
+		box_dump_t  *box_dump_header_p = (box_dump_t *)(buf + buf_offset);
 
 		/* Advance memory byffer pointer bu size of the returned offset */
 		buf_offset += basket_fill_send_box_from_box_t(box_dump_header_p, box);
@@ -665,10 +661,10 @@ FATTR_WARN_UNUSED_RET void *basket_to_buf(const void *basket, size_t *size)
 	/* TODO: Pass the buffer to fill to zhash from outside */
 	if (_basket->zhash) {
 		size_t zsize;
-		char   *zhash_dump = zhash_to_buf(_basket->zhash, &zsize);
-		TESTP_ABORT(zhash_dump);
-		memcpy((buf + buf_offset), zhash_dump, zsize);
-		free(zhash_dump);
+		char   *zhash_dump_p = zhash_to_buf(_basket->zhash, &zsize);
+		TESTP_ABORT(zhash_dump_p);
+		memcpy((buf + buf_offset), zhash_dump_p, zsize);
+		free(zhash_dump_p);
 		buf_offset += zsize;
 	}
 
@@ -687,7 +683,6 @@ FATTR_WARN_UNUSED_RET void *basket_from_buf(void *buf, const size_t size)
 	uint32_t             buf_offset         = 0;
 	basket_t             *basket;
 	basket_send_header_t *basket_buf_header;
-	box_dump_t           *box_dump_header;
 	char                 *buf_char          = buf;
 
 	TESTP_ABORT(buf);
@@ -728,11 +723,11 @@ FATTR_WARN_UNUSED_RET void *basket_from_buf(void *buf, const size_t size)
 	for (box_index = 0; box_index < basket_buf_header->boxes_num; box_index++) {
 
 		/* Advance the pointer to the next box header */
-		box_dump_header = (box_dump_t *)(buf_char + buf_offset);
+		box_dump_t *box_dump_header_p = (box_dump_t *)(buf_char + buf_offset);
 
 		/* Test watermark */
-		if (WATERMARK_BOX != box_dump_header->watermark) {
-			DE("Wrong box[%u]: wrong watermark. Expected %X but it is %X\n", box_index, WATERMARK_BOX, box_dump_header->watermark);
+		if (WATERMARK_BOX != box_dump_header_p->watermark) {
+			DE("Wrong box[%u]: wrong watermark. Expected %X but it is %X\n", box_index, WATERMARK_BOX, box_dump_header_p->watermark);
 			if (0 != basket_release(basket)) {
 				DE("Could not release basket\n");
 			}
@@ -743,20 +738,20 @@ FATTR_WARN_UNUSED_RET void *basket_from_buf(void *buf, const size_t size)
 		buf_offset += sizeof(box_dump_t);
 
 		/* If there no data, we do not even call the box creation, and the box pointer stays NULL */
-		if (0 == box_dump_header->box_size) {
+		if (0 == box_dump_header_p->box_size) {
 			continue;
 		}
 
 		/* Test that the memory area we pass to box_new_from_data_by_index() is in boundaries of the buf */
-		if (buf_offset + box_dump_header->box_size > size) {
-			DE("Wrong: The size of box[%u] overhead size of the whole buffer: %d = buf_offset (%d) + box_dump_header->box_size (%d) > size (%zu)\n",
-			   box_index, buf_offset + box_dump_header->box_size, buf_offset, box_dump_header->box_size, size);
+		if (buf_offset + box_dump_header_p->box_size > size) {
+			DE("Wrong: The size of box[%u] overhead size of the whole buffer: %u = buf_offset (%u) + box_dump_header->box_size (%u) > size (%zu)\n",
+			   box_index, buf_offset + box_dump_header_p->box_size, buf_offset, box_dump_header_p->box_size, size);
 			abort();
 		}
 
 		/* Create a new box */
-		if (OK != box_new_from_data_by_index(basket, box_index, buf_char + buf_offset, box_dump_header->box_size)) {
-			DE("Adding a buffer size (%u) to tail of box (%u) failed\n", box_dump_header->box_size, box_index);
+		if (OK != box_new_from_data_by_index(basket, box_index, buf_char + buf_offset, box_dump_header_p->box_size)) {
+			DE("Adding a buffer size (%u) to tail of box (%u) failed\n", box_dump_header_p->box_size, box_index);
 
 
 			if (0 != basket_release(basket)) {
@@ -766,7 +761,7 @@ FATTR_WARN_UNUSED_RET void *basket_from_buf(void *buf, const size_t size)
 		}
 
 		/* Advance the offset */
-		buf_offset += box_dump_header->box_size;
+		buf_offset += box_dump_header_p->box_size;
 
 		/* Increase number of used boxes */
 		basket->boxes_used++;
@@ -803,13 +798,13 @@ FATTR_WARN_UNUSED_RET int8_t box_compare_box(const void *box_left, const void *b
 	}
 
 	if (_box_right->used != _box_left->used) {
-		DDD("box_right->used (%ld) != box_left->used (%ld)\n", _box_right->used, _box_left->used);
+		DDD("box_right->used (%lld) != box_left->used (%lld)\n", _box_right->used, _box_left->used);
 		return 1;
 	}
 
 	memcmp_rc = memcmp(_box_right->data, _box_left->data, _box_right->used);
 	if (0 != memcmp_rc) {
-		DDD("box_right->data != box_left->data at %d : data size is %lu\n", memcmp_rc, _box_right->used);
+		DDD("box_right->data != box_left->data at %d : data size is %lld\n", memcmp_rc, _box_right->used);
 		return 1;
 	}
 
@@ -1013,7 +1008,7 @@ FATTR_WARN_UNUSED_RET void *box_data_ptr(const void *basket, const box_u32_t box
 	TESTP_ABORT(_basket->boxes);
 
 	if (box_num > _basket->boxes_used) {
-		DE("Asked box (%u) is out of range (%d)\n", box_num, _basket->boxes_used);
+		DE("Asked box (%u) is out of range (%u)\n", box_num, _basket->boxes_used);
 		ABORT_OR_RETURN(NULL);
 	}
 
@@ -1035,7 +1030,7 @@ FATTR_WARN_UNUSED_RET FATTR_CONST ssize_t box_data_size(const void *basket, cons
 	TESTP_ABORT(_basket);
 
 	if (box_num > _basket->boxes_used) {
-		DE("Asked box (%u) is out of range (%d)\n", box_num, _basket->boxes_used);
+		DE("Asked box (%u) is out of range (%u)\n", box_num, _basket->boxes_used);
 		ABORT_OR_RETURN(-1);
 	}
 	box = basket_get_box(_basket, box_num);
