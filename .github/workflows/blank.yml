@@ -35,4 +35,4 @@ jobs:
         run: make clean test_all
 
       - name: Run Basket Test
-        run: ./test_all.out
+        run: $GITHUB_WORKSPACE/test_all.out
