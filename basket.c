@@ -315,7 +315,9 @@ FATTR_WARN_UNUSED_RET ret_t box_insert_after(void *basket, const uint32_t after_
 	}
 
 	if (OK != bx_add(box, buffer, buffer_size)) {
-		bx_free(box);
+		if (OK != bx_free(box)) {
+			DE("Could not release box\n");
+		}
 		ABORT_OR_RETURN(-1);
 	}
 
@@ -413,13 +415,14 @@ FATTR_WARN_UNUSED_RET ret_t box_merge_box(void *basket, const box_u32_t src, con
 	return box_clean(_basket, src);
 }
 
+#if 0 /* SEB */
 FATTR_WARN_UNUSED_RET ret_t box_bisect(__attribute__((unused))void *basket,
 									   __attribute__((unused)) const box_u32_t box_num,
-									   __attribute__((unused)) const size_t from_offset)
-{
+									   __attribute__((unused)) const size_t from_offset){
 	return -1;
 	/* TODO */
 }
+#endif
 
 FATTR_WARN_UNUSED_RET ret_t basket_collapse(void *basket)
 {

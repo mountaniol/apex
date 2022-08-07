@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <sys/types.h>
+#include "codes.h"
 
 #define BUF_NOISY
 #include <stdint.h>
@@ -10,14 +11,6 @@
 #ifndef MIN
 	#define MIN(a,b) ((a < b) ? a : b)
 #endif
-
-enum {
- 	AGN = -2, /* "Try again" status */
- 	BAD = -1,  /* Error status */
- 	OK = 0,    /* Success status */
- 	YES = 0,   /* YES in case a function returns YES or NO */
- 	NO = 1,    /* NO in case a function returns YES or NO */
-};
 
 typedef int ret_t;
 

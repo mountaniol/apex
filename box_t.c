@@ -446,6 +446,7 @@ FATTR_WARN_UNUSED_RET ret_t bx_free(box_t *box)
 	/* Just in case, test that the box_t is valid */
 	if (OK != bx_is_valid(box, __func__, __LINE__)) {
 		DE("Warning: box is invalid\n");
+		return -1;
 	}
 
 	/* If there's an internal buffer, release it */
