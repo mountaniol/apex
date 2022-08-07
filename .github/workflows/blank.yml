@@ -38,8 +38,4 @@ jobs:
         run: make tests
 
       - name: Run Basket Test
-        run: ./test_basket.out
-
-      - name: Run Zhash Test
-        run: ./test_zhash3.out
-          
+        run: ./test_all.out

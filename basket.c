@@ -59,7 +59,6 @@ FATTR_COLD FATTR_UNUSED static void basket_dump(void *basket, const char *msg)
 			DD(">>> Box[%u] used:       %ld\n", i, bx_used_take(box));
 			DD(">>> Box[%u] room:       %ld\n", i, bx_room_take(box));
 			DD(">>> Box[%u] data ptr:   %p\n", i, bx_data_take(box));
-
 		}
 	}
 	DD("^^^^^^^^^^^^^^^^^^^^^^^^^\n");
@@ -69,10 +68,7 @@ FATTR_WARN_UNUSED_RET void *basket_new(void)
 {
 	/* basket: pointer to the allocated memory */
 	basket_t *basket = malloc(sizeof(basket_t));
-	if (NULL == basket) {
-		DE("Can't allocate\n");
-		return (NULL);
-	}
+	TESTP(basket, NULL);
 
 	memset(basket, 0, sizeof(basket_t));
 	return (basket);
@@ -549,6 +545,11 @@ int8_t basket_checksum_test(const basket_send_header_t *basket_buf_header_p)
 	char     *address_to_start = NULL;
 
 	TESTP(basket_buf_header_p, -1);
+
+	/* If the checksum is 0, it means, it not set when the buffer created */
+	if (0 == basket_buf_header_p->checksum) {
+		return 0;
+	}
 
 	start_offset      = offsetof(basket_send_header_t, ticket);
 	size_to_count     = basket_buf_header_p->total_len - start_offset;

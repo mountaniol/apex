@@ -68,7 +68,7 @@ typedef struct {
 	uint64_t ticket; /**< Ticket is for free use. End use can put here whatever she/he wants. */
 	box_u32_t boxes_used; /**< Number of bufs in the array */
 	box_u32_t boxes_allocated; /**< For internal use: how many buf_t pointers are allocated in the 'bufs' */
-	ztable_t *zhash;
+	ztable_t *zhash; /**< Zhash: the Zhash table, for key/value keeping */
 } basket_t;
 
 typedef struct __attribute__((packed)) {

@@ -28,12 +28,8 @@ ZHASH_O=zhash3.o murmur3.o checksum.o $(FNV_HASH_O)
 BOX_O=box_t.o box_t_memory.o
 BASKET_O=basket.o $(BOX_O) $(ZHASH_O) 
 
-ZHASH_TEST_O=zhash3_test.o $(ZHASH_O)
-ZHASH_TEST_T=test_zhash3.out
-
-#BASKET_TEST_O=basket_test.o $(BASKET_O)
-BASKET_TEST_O=basket_test.o $(BASKET_O)
-BASKET_TEST_T=test_basket.out
+TEST_ALL_O=test_all.o $(BASKET_O)
+TEST_ALL_T=test_all.out
 
 # The library example 
 APEX_O=apex.o $(ZHASH_O)
@@ -43,8 +39,7 @@ all: apex
 
 clean:
 	rm -f $(APEX_O) $(APEX_T) $(BOX_O)
-	rm -f $(BASKET_O) $(BASKET_TEST_O) $(BASKET_TEST_T)
-	rm -f $(ZHASH_TEST_O) $(ZHASH_TEST_T)
+	rm -f $(BASKET_O) $(TEST_ALL_O) $(TEST_ALL_T)
 
 apex: $(APEX_O)
 	$(GCC) $(CFLAGS) $(APEX_O) -o $(APEX_T)
@@ -52,13 +47,29 @@ apex: $(APEX_O)
 #test_basket: $(BASKET_TEST_O) # compile buf_t and build archive
 #	$(GCC) $(CFLAGS) $(BASKET_TEST_O) -o $(BASKET_TEST_T)
 
-test_basket: $(BASKET_O) $(BASKET_TEST_O) # compile buf_t and build archive
-	$(GCC) $(CFLAGS) $(BASKET_TEST_O) -o $(BASKET_TEST_T)
+test_all: $(TEST_ALL_O) # compile buf_t and build archive
+	$(GCC) $(CFLAGS) $(TEST_ALL_O) -o $(TEST_ALL_T)
 
-test_zhash: $(ZHASH_O) $(ZHASH_TEST_O) # compile buf_t and build archive
-	$(GCC) $(CFLAGS) $(ZHASH_TEST_O) -o $(ZHASH_TEST_T)
 
-tests: test_zhash test_basket
+tests: test_all
+
+.PHONY:check
+check:
+	@echo "+++ $@: USER=$(USER), UID=$(UID), GID=$(GID): $(CURDIR)"
+	#echo ============= 32 bit check =============
+	$(ECH)cppcheck -j2 -q --force  --enable=all --platform=unix32 -I/usr/include/openssl ./*.[ch]
+	#echo ============= 64 bit check =============
+	#$(ECH)cppcheck -q --force  --enable=all --platform=unix64 -I/usr/include/openssl ./*.[ch]
+
+
+.PHONY:splint
+splint:
+	@echo "+++ $@: USER=$(USER), UID=$(UID), GID=$(GID): $(CURDIR)"
+	splint -standard -export-local -pred-bool-others -noeffect +matchanyintegral +unixlib -I/usr/include/openssl -D__gnuc_va_list=va_list  ./*.[ch]
+
+flaw:
+	flawfinder ./*.[ch] 
+
 
 %.o:%.c
 	@echo "|>" $@...
