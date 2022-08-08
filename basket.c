@@ -183,6 +183,30 @@ FATTR_WARN_UNUSED_RET size_t basket_memory_size(const void *basket)
 	return size;
 }
 
+FATTR_WARN_UNUSED_RET size_t basket_data_size(const void *basket)
+{
+	const basket_t *_basket  = basket;
+	/* Index variable to iterate boxes */
+	box_u32_t      box_index = 0;
+	/* Accumulator variable to count size */
+	size_t         size      = 0;
+
+	TESTP_ABORT(_basket);
+
+	for (box_index = 0; box_index < _basket->boxes_used; box_index++) {
+		const box_t  *box = basket_get_box(_basket, box_index);
+
+		/* It can be NULL; normal */
+		if (NULL == box) {
+			continue;
+		}
+
+		/* Add size of the data buffer */
+		size += bx_room_take(box);
+	}
+	return size;
+}
+
 /* Clean all boxes */
 FATTR_WARN_UNUSED_RET ret_t basket_clean(void *basket)
 {
@@ -532,7 +556,7 @@ static void basket_fill_send_header_from_basket_t(basket_send_header_t *basket_b
 	basket_buf_header_p->checksum = 0;
 }
 
-void basket_checksum_set(basket_send_header_t *basket_buf_header_p)
+static void basket_checksum_set(basket_send_header_t *basket_buf_header_p)
 {
 	/* We start the checksum from 'ticket',
 	   we do not consider watermark and the checksum fields */
@@ -706,7 +730,7 @@ FATTR_WARN_UNUSED_RET void *basket_to_buf(const void *basket, size_t *size)
 	return buf;
 }
 
-FATTR_WARN_UNUSED_RET void *basket_from_buf(void *buf, const size_t size)
+FATTR_WARN_UNUSED_RET void *basket_from_buf(void *buf, size_t size)
 {
 	uint32_t             box_index;
 	uint32_t             buf_offset         = 0;
@@ -715,6 +739,12 @@ FATTR_WARN_UNUSED_RET void *basket_from_buf(void *buf, const size_t size)
 	char                 *buf_char          = buf;
 
 	TESTP_ABORT(buf);
+
+	/* If the user doesn't pass the buffer size, we just ignore this fact and assign it from the buffer itself */
+	if (0 == size) {
+		size = basket_get_size_from_flat_buffer(buf);
+	}
+
 	if (size < sizeof(basket_send_header_t)) {
 		DE("Wrong size: less than size of structure basket_send_header_t\n");
 		TRY_ABORT();
@@ -1079,6 +1109,37 @@ FATTR_WARN_UNUSED_RET void *box_data_ptr(const void *basket, const box_u32_t box
 	return bx_data_take(box);
 }
 
+FATTR_WARN_UNUSED_RET ssize_t box_data_copy(const void *basket, const box_u32_t box_num, void *dst_buf, size_t dst_buf_size)
+{
+	size_t to_copy;
+	const basket_t *_basket = basket;
+	box_t          *box;
+	TESTP_ABORT(_basket);
+	TESTP_ABORT(_basket->boxes);
+	TESTP_ABORT(dst_buf);
+
+	if (box_num > _basket->boxes_used) {
+		DE("Asked box (%u) is out of range (%u)\n", box_num, _basket->boxes_used);
+		ABORT_OR_RETURN(-1);
+	}
+
+	box = basket_get_box(_basket, box_num);
+
+	/* This should not happen never */
+	if (NULL == box) {
+		DE("There is no buffer by asked index: %u\n", box_num);
+		abort();
+	}
+
+	if (0 == box->used) {
+		return 0;
+	}
+
+	to_copy = MIN(dst_buf_size, (size_t )box->used);
+	memcpy(dst_buf, box->data, to_copy);
+	return to_copy;
+}
+
 FATTR_WARN_UNUSED_RET FATTR_CONST ssize_t box_data_size(const void *basket, const box_u32_t box_num)
 {
 	const basket_t *_basket = basket;
@@ -1134,6 +1195,37 @@ FATTR_WARN_UNUSED_RET FATTR_CONST void *box_steal_data(void *basket, const box_u
 	}
 
 	return bx_data_steal(box);
+}
+
+void basket_set_ticket(void *basket, uint64_t ticket)
+{	basket_t *_basket = basket;
+	TESTP_ABORT(_basket);
+	_basket->ticket = ticket;
+}
+
+uint64_t basket_get_ticket(void *basket)
+{	const basket_t *_basket = basket;
+	TESTP_ABORT(_basket);
+	return _basket->ticket;
+}
+
+uint64_t basket_get_ticket_from_flat_buffer(void *flat_buffer)
+{	const basket_send_header_t *basket_send_header = (basket_send_header_t *) flat_buffer;
+	TESTP_ABORT(basket_send_header);
+	return basket_send_header->ticket;
+}
+
+size_t basket_get_size_from_flat_buffer(void *flat_buffer)
+{	const basket_send_header_t *basket_send_header = (basket_send_header_t *) flat_buffer;
+	TESTP_ABORT(basket_send_header);
+	return basket_send_header->total_len;
+}
+
+int basket_validate_flat_buffer(void *flat_buffer)
+{
+	const basket_send_header_t *basket_send_header = (basket_send_header_t *)flat_buffer;
+	TESTP(flat_buffer, -1);
+	return basket_checksum_test(basket_send_header);
 }
 
 

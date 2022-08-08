@@ -61,7 +61,7 @@
  * @def
  * @details How many basket->bufs pointers allocated at once
  */
-#define BASKET_BUFS_GROW_RATE (32)
+#define BASKET_BUFS_GROW_RATE (1)
 
 typedef struct {
 	void **boxes; /**< Array of buf_t structs */
@@ -82,7 +82,7 @@ typedef struct __attribute__((packed)) {
 	uint32_t watermark; /**< Watermark: filled with a predefined pattern WATERMARK_BASKET */
 	uint32_t checksum; /**< The checksum of box buffer, means ::box_dump field; This field is optional, and ignored if == 0 */
 	uint64_t ticket; /**< The same as ticket in ::basket_t, for free use */
-	uint32_t total_len; /**< Total length of this buffer, including 'total_len' field */
+	uint32_t total_len; /**< Total length of this buffer, including all fields */
 	uint32_t boxes_used; /**< Number of Boxed used in original basket */
 	uint32_t boxes_dumped; /**< Number of Boxed dumped from the original basked */
 	uint32_t ztable_buf_size; /**< Size (in bytes) of ztable buffer. If '0' meant no ztable */
@@ -123,6 +123,15 @@ extern void *basket_new(void);
  *  		buffer will be, use ::basket_flat_buf_size()
  */
 extern size_t basket_memory_size(const void *basket);
+
+/**
+ * @author Sebastian Mountaniol (7/15/22)
+ * @brief Return total size (bytes) of data saved in boxes 
+ * @param const void *basket  Basket to measure
+ * @return size_t Size of the all buffers in all boxes
+ * @details
+ */
+extern size_t basket_data_size(const void *basket);
 
 /**
  * @author Sebastian Mountaniol (7/31/22)
@@ -312,7 +321,7 @@ extern void *basket_to_buf(const void *basket, size_t *size);
  *  		operation. The caller owns the memory and the caller
  *  		responsible to release it.
  */
-extern void *basket_from_buf(void *buf, const size_t size);
+extern void *basket_from_buf(void *buf, size_t size);
 
 /**
  * @author Sebastian Mountaniol (7/26/22)
@@ -393,6 +402,17 @@ extern ret_t box_data_replace(void *basket, const box_u32_t box_num, const void 
 extern void *box_data_ptr(const void *basket, const box_u32_t box_num);
 
 /**
+ * @author Sebastian Mountaniol (8/8/22)
+ * @brief Copy data from a box to user's buffer
+ * @param const void* basket   Basket where the box placed   
+ * @param const box_u32_t box_num     Index of box
+ * @param void* dst_buf     Pointer to user's buffer
+ * @param size_t dst_buf_size Size (in bytes) of user's buffer
+ * @return ssize_t Number of copied bytes
+ * @details 
+ */
+extern ssize_t box_data_copy(const void *basket, const box_u32_t box_num, void *dst_buf, size_t dst_buf_size);
+/**
  * @author Sebastian Mountaniol (7/12/22)
  * @brief Returns size in bytes of the buffer in "box_num" box
  * @param void* basket   Basket object containing the asked
@@ -428,6 +448,61 @@ extern ret_t box_data_free(void *basket, const box_u32_t box_num);
  * @details 
  */
 extern void *box_steal_data(void *_basket, const box_u32_t box_num);
+
+/**
+ * @author Sebastian Mountaniol (8/8/22)
+ * @brief Set ticket into basket object
+ * @param void* basket Pointer to basket object
+ * @param uint64_t ticket Ticket to set
+ * @details Ticket is a 64 bit unsigned value. THe usage of the
+ *  		ticket is up to user. The user can use it to
+ *  		distinct between different kinds of baskets it
+ *  		creates.
+ */
+extern void basket_set_ticket(void *basket, uint64_t ticket);
+
+/**
+ * @author Sebastian Mountaniol (8/8/22)
+ * @brief Get ticket from basket object
+ * @param void* basket Basket to get ticket
+ * @return uint64_t The ticket
+ * @details See details of ::basket_set_ticket()
+ */
+extern uint64_t basket_get_ticket(void *basket);
+
+/**
+ * @author Sebastian Mountaniol (8/8/22)
+ * @brief Extract ticket from the flat buffer profuced from a
+ *  	  ticket; this helps to detect kind of buffer without
+ *  	  converting it from flat memory to object 
+ * @param void* flat_buffer Pointer to memory buffer containing
+ *  		  flat buffer representation of the basket
+ * @return uint64_t Ticket
+ * @details 
+ */
+extern uint64_t basket_get_ticket_from_flat_buffer(void *flat_buffer);
+
+/**
+ * @author Sebastian Mountaniol (8/8/22)
+ * @brief Get the size of the flat buffer
+ * @param void* flat_buffer Pointer to memory buffer containing
+ *  		  flat buffer representation of the basket
+ * @return size_t Size of this buffer
+ * @details The flat memory basket buffer contains its size. It
+ *  		set when the buffer created.
+ */
+extern size_t basket_get_size_from_flat_buffer(void *flat_buffer);
+
+/**
+ * @author Sebastian Mountaniol (8/8/22)
+ * @brief Validate integrity of the flat buffer
+ * @param void* flat_buffer The pointer to flat buffer to
+ *  		  validate
+ * @return int 0 if the buffer is valid, 1 if it is not valid,
+ *  	   -1 on an error
+ * @details 
+ */
+extern int basket_validate_flat_buffer(void *flat_buffer);
 
 /*** KEY/VALUE API ***/
 
