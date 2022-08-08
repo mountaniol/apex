@@ -505,8 +505,7 @@ static int box_data_insert_and_validate(basket_t *basket, const box_u32_t box_nu
 	char   *data_ptr     = NULL;
 	size_t data_ptr_size;
 	TESTP(basket, -1);
-	TESTP(data, -1);
-
+	
 	rc = box_new(basket, data, data_len);
 	if (rc < 0) {
 		DE("[TEST] Failed adding a string to a box\n");
@@ -514,16 +513,17 @@ static int box_data_insert_and_validate(basket_t *basket, const box_u32_t box_nu
 	}
 
 	data_ptr = box_data_ptr(basket, box_num);
-	TESTP(data_ptr, -1);
+	// TESTP(data_ptr, -1);
 
 	data_ptr_size = box_data_size(basket, box_num);
+
 	if (data_ptr_size != data_len) {
 		DE("[TEST] The size (%zu) of data in the box[%u] is differ from expected (%zu)\n", data_ptr_size, box_num, data_len);
 		return -1;
 	}
 
-	if (memcmp(data_ptr, data, data_len)) {
-		DE("[TEST] The data in box and testes data are differern\n");
+	if ((data != NULL) && (memcmp(data_ptr, data, data_len))) {
+		DE("[TEST] The data in box and testes data are different\n");
 		return -1;
 	}
 
@@ -585,7 +585,95 @@ static basket_t *create_alice_basket(void)
 	return basket;
 }
 
-static void basket_collapse_in_place_test(void)
+/**
+ * @author Sebastian Mountaniol (8/8/22)
+ * @brief Create a basket with not sequantional boxes; see
+ *  	  details
+ * @return basket_t* Created basket
+ * @details Not "sequantional boxes" means there are holes
+ *  		between boxes. For example, box[0] contains data,
+ *  		box[1] is empty (not even initialized), box[2]
+ *  		contains data, box [3] exists but empty 
+ */
+static basket_t *create_irregular_alice_basket(void)
+{
+	basket_t *basket   = NULL;
+
+	basket = basket_new();
+	if (NULL == basket) {
+		DE("[TEST] Failed a basket creation\n");
+		abort();
+	}
+
+	if (0 != box_data_insert_and_validate(basket, 0, string_alice_1, strnlen(string_alice_1, STRING_ALICE_ALL_LEN))) {
+		DE("[TEST] Failed adding a string to a box 0\n");
+		abort();
+	}
+
+	if (0 != box_data_insert_and_validate(basket, 1, NULL, 0)) {
+		DE("[TEST] Failed adding a NULL/0 to a box 1\n");
+		abort();
+	}
+
+	if (0 != box_data_insert_and_validate(basket, 2, string_alice_2, strnlen(string_alice_2, STRING_ALICE_ALL_LEN))) {
+		DE("[TEST] Failed adding a string to a box 2\n");
+		abort();
+	}
+
+	if (0 != box_data_insert_and_validate(basket, 3, NULL, 0)) {
+		DE("[TEST] Failed adding a NULL/0 to a box 1\n");
+		abort();
+	}
+
+	if (0 != box_data_insert_and_validate(basket, 4, NULL, 0)) {
+		DE("[TEST] Failed adding a NULL/0 to a box 1\n");
+		abort();
+	}
+
+	if (0 != box_data_insert_and_validate(basket, 5, string_alice_3, strnlen(string_alice_3, STRING_ALICE_ALL_LEN))) {
+		DE("[TEST] Failed adding a string to a box\n");
+		abort();
+	}
+
+	if (0 != box_data_insert_and_validate(basket, 6, string_alice_4, strnlen(string_alice_4, STRING_ALICE_ALL_LEN))) {
+		DE("[TEST] Failed adding a string to a box\n");
+		abort();
+	}
+
+	if (0 != box_data_insert_and_validate(basket, 7, string_alice_5, strnlen(string_alice_5, STRING_ALICE_ALL_LEN))) {
+		DE("[TEST] Failed adding a string to a box\n");
+		abort();
+	}
+
+	if (0 != box_data_insert_and_validate(basket, 8, NULL, 0)) {
+		DE("[TEST] Failed adding a NULL/0 to a box 1\n");
+		abort();
+	}
+
+	if (0 != box_data_insert_and_validate(basket, 9, string_alice_6, strnlen(string_alice_6, STRING_ALICE_ALL_LEN))) {
+		DE("[TEST] Failed adding a string to a box\n");
+		abort();
+	}
+
+	if (0 != box_data_insert_and_validate(basket, 10, string_alice_7, strnlen(string_alice_7, STRING_ALICE_ALL_LEN))) {
+		DE("[TEST] Failed adding a string to a box\n");
+		abort();
+	}
+
+	if (0 != box_data_insert_and_validate(basket, 11, NULL, 0)) {
+		DE("[TEST] Failed adding a NULL/0 to a box 1\n");
+		abort();
+	}
+
+	if (0 != box_data_insert_and_validate(basket, 12, string_alice_8, strnlen(string_alice_8, STRING_ALICE_ALL_LEN))) {
+		DE("[TEST] Failed adding a string to a box\n");
+		abort();
+	}
+
+	return basket;
+}
+
+static void basket_regular_collapse_in_place_test(void)
 {
 	ret_t    rc;
 	basket_t *basket        = NULL;
@@ -619,7 +707,45 @@ static void basket_collapse_in_place_test(void)
 		abort();
 	}
 
-	PR("[TEST] Success: A complex 'collapse all boxes in place' test\n");
+	PR("[TEST] Success: A complex 'collapse all boxes in place' test, a regular basket\n");
+}
+
+static void basket_irregular_collapse_in_place_test(void)
+{
+	ret_t    rc;
+	basket_t *basket        = NULL;
+	char     *box0_data_ptr;
+
+	basket = create_irregular_alice_basket();
+
+	if (NULL == basket) {
+		DE("[TEST] Failed a basket creation\n");
+		abort();
+	}
+
+	rc = basket_collapse(basket);
+	if (OK != rc) {
+		DE("[TEST] Failed basket collapsing in place\n");
+		abort();
+	}
+
+	box0_data_ptr = box_data_ptr(basket, 0);
+	if (NULL == box0_data_ptr) {
+		DE("[TEST] Failed to get box[0] data ptr\n");
+		abort();
+	}
+
+	if (0 != strncmp(string_alice_all, box0_data_ptr, strnlen(string_alice_all, STRING_ALICE_ALL_LEN))) {
+		DE("[TEST] Failed compare string in box[0] with string_all\n");
+		abort();
+	}
+
+	if (OK != basket_release(basket)) {
+		DE("[TEST] Failed basket releasing\n");
+		abort();
+	}
+
+	PR("[TEST] Success: A complex 'collapse all boxes in place' test, an irregular basket\n");
 }
 
 /**
@@ -633,7 +759,7 @@ static void basket_collapse_in_place_test(void)
  * auccessful
  * @details 
  */
-void basket_to_buf_test(void)
+void basket_regular_to_buf_test(void)
 {
 	ret_t    rc;
 	basket_t *basket       = NULL;
@@ -681,7 +807,59 @@ void basket_to_buf_test(void)
 		abort();
 	}
 
-	PR("[TEST] Success: 'Basket to Flat Memory Buffer' and 'Flat Memory Buffer to Basket' test\n");
+	PR("[TEST] Success: 'Basket to Flat Memory Buffer' and 'Flat Memory Buffer to Basket' test, a regular basket\n");
+}
+
+void basket_irregular_to_buf_test(void)
+{
+	ret_t    rc;
+	basket_t *basket       = NULL;
+	basket_t *basket_2     = NULL;
+	char     *flat_buf;
+	size_t   flat_buf_size;
+
+	basket = create_irregular_alice_basket();
+
+	if (NULL == basket) {
+		DE("[TEST] Failed a basket creation\n");
+		abort();
+	}
+
+	flat_buf = basket_to_buf(basket, &flat_buf_size);
+	if (NULL == flat_buf) {
+		DE("[TEST] Can not create a flat memory buffer from basket\n");
+		abort();
+	}
+
+	DDD("[TEST] Created a flat memory buffer from 'Alice' basket, size of basket = %zu, size of buf %zu, size of Alice text is %zu, overhead of the basket = %zu\n",
+		basket_memory_size(basket), flat_buf_size, strnlen(string_alice_all, STRING_ALICE_ALL_LEN), flat_buf_size - strnlen(string_alice_all, STRING_ALICE_ALL_LEN));
+
+	basket_2 = basket_from_buf(flat_buf, flat_buf_size);
+	if (NULL == basket_2) {
+		DE("[TEST] Can not create a basket from flat memory buffer\n");
+		abort();
+	}
+
+	free(flat_buf);
+
+	if (basket_compare_basket(basket, basket_2)) {
+		DE("[TEST] Original basket and the restored basket are not the same\n");
+		abort();
+	}
+
+	rc = basket_release(basket);
+	if (0 != rc) {
+		DE("[TEST] Can not release the original basket\n");
+		abort();
+	}
+
+	rc = basket_release(basket_2);
+	if (0 != rc) {
+		DE("[TEST] Can not release the restored basket\n");
+		abort();
+	}
+
+	PR("[TEST] Success: 'Basket to Flat Memory Buffer' and 'Flat Memory Buffer to Basket' test, an irregular basket\n");
 }
 
 #define STR_KEY_LEN (32)
@@ -826,10 +1004,16 @@ int main(void)
 	box_new_from_data_simple_test();
 	box_new_from_data_test();
 
-	PR("\nSECTION 3: BASKET\n");
+	PR("\nSECTION 3: BASKET, REGULAR\n");
 	basket_new_test();
-	basket_collapse_in_place_test();
-	basket_to_buf_test();
+	basket_regular_collapse_in_place_test();
+	basket_regular_to_buf_test();
+
+	PR("\nSECTION 4: BASKET, IRREGULAR\n");
+	basket_irregular_collapse_in_place_test();
+	basket_irregular_to_buf_test();
+
+	PR("\nSECTION 5: BASKET, KEY/VALUE\n");
 	basket_test_keyval();
 
 	return 0;

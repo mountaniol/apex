@@ -441,7 +441,12 @@ FATTR_WARN_UNUSED_RET ret_t basket_collapse(void *basket)
 
 	for (box_index = 1; box_index < _basket->boxes_used; box_index++) {
 		if (NULL == _basket->boxes[box_index]) {
-			DD("Do not merge box[%u] of %u, because it is NULL pointer\n", box_index, _basket->boxes_used);
+			DDD("Do not merge box[%u] of %u, because it is NULL pointer\n", box_index, _basket->boxes_used);
+			continue;
+		}
+
+		if (0 == box_data_size(basket, box_index)) {
+			DDD("Do not merge box[%u] of %u, because it is 0 bytes length\n", box_index, _basket->boxes_used);
 			continue;
 		}
 
@@ -459,12 +464,18 @@ size_t basket_flat_buf_size(const basket_t *basket)
 	size_t    buf_size  = sizeof(basket_send_header_t);
 
 	/* And we need the struct box_dump_t per box */
-	buf_size += sizeof(box_dump_t) * basket->boxes_used;
+	//buf_size += sizeof(box_dump_t) * basket->boxes_used;
 
 	/* We need to dump the content of every box, so count total size of buffers in all boxes */
 	for (box_index = 0; box_index < basket->boxes_used; box_index++) {
-		const box_t *box = basket_get_box(basket, box_index);
-		buf_size += bx_used_take(box);
+		const uint32_t box_size = box_data_size(basket, box_index);
+		// const box_t *box = basket_get_box(basket, box_index);
+
+		if (0 == box_size) {
+			continue;
+		}
+
+		buf_size += sizeof(box_dump_t) + box_size;
 	}
 
 	/* If there key/value hash, add the size of needded to dump it into calculation */
@@ -486,20 +497,28 @@ static void basket_fill_send_header_from_basket_t(basket_send_header_t *basket_b
 												  const basket_t *basket)
 {
 	box_u32_t box_index;
+	box_u32_t boxes_to_dump = 0;
 	size_t    buf_size  = sizeof(basket_send_header_t);
 
 	/* And we need the struct box_dump_t per box */
-	buf_size += sizeof(box_dump_t) * basket->boxes_used;
+	// buf_size += sizeof(box_dump_t) * basket->boxes_used;
 
 	/* We need to dump the content of every box, so count total size of buffers in all boxes */
 	for (box_index = 0; box_index < basket->boxes_used; box_index++) {
-		const box_t *box = basket_get_box(basket, box_index);
-		buf_size += bx_used_take(box);
+		const uint32_t box_size = box_data_size(basket, box_index);
+		if (0 == box_size) {
+			continue;
+		}
+
+		buf_size += sizeof(box_dump_t);
+		buf_size += box_size;
+		boxes_to_dump++;
 	}
 
 	basket_buf_header_p->ticket = basket->ticket;
 	basket_buf_header_p->total_len = buf_size;
-	basket_buf_header_p->boxes_num = basket->boxes_used;
+	basket_buf_header_p->boxes_used = basket->boxes_used;
+	basket_buf_header_p->boxes_dumped = boxes_to_dump;
 
 	/* Watermark: a predefined pattern. */
 	basket_buf_header_p->watermark = WATERMARK_BASKET;
@@ -581,7 +600,7 @@ int8_t basket_checksum_test(const basket_send_header_t *basket_buf_header_p)
  *  		points to a buffer big enoght for the box_dump_t
  *  		structure and all dumped data from the box. 
  */
-FATTR_WARN_UNUSED_RET static size_t basket_fill_send_box_from_box_t(box_dump_t *box_dump_header_p, const box_t *box)
+FATTR_WARN_UNUSED_RET static size_t basket_fill_send_box_from_box_t(box_dump_t *box_dump_header_p, const box_t *box, uint32_t box_index)
 {
 	char      *buf       = (char *)box_dump_header_p;
 	char      *box_data;
@@ -594,13 +613,11 @@ FATTR_WARN_UNUSED_RET static size_t basket_fill_send_box_from_box_t(box_dump_t *
 	}
 
 	box_dump_header_p->box_size = box_used;
+	box_dump_header_p->box_index = box_index;
 	box_dump_header_p->watermark = WATERMARK_BOX;
 
 	// memcpy(buf + buf_offset, &box_dump_header, sizeof(box_dump_t));
 	buf_offset += sizeof(box_dump_t);
-
-	/* If this box is NULL, or is empty, we don't add any data and skip */
-	if (0 == box_used) return buf_offset;
 
 	box_data = bx_data_take(box);
 
@@ -620,6 +637,7 @@ FATTR_WARN_UNUSED_RET void *basket_to_buf(const void *basket, size_t *size)
 {
 	const basket_t       *_basket             = basket;
 	box_u32_t            box_index;
+	uint32_t             boxes_dumped = 0;
 	char                 *buf;
 	size_t               buf_size             = 0;
 	size_t               buf_offset           = 0;
@@ -647,17 +665,25 @@ FATTR_WARN_UNUSED_RET void *basket_to_buf(const void *basket, size_t *size)
 	/* Advance memory byffer poiter */
 	buf_offset += sizeof(basket_send_header_t);
 
-
 	/*** 2. Dump all boxes ***/
 
 	/* Now we run on array of boxes, and add one by one to the buffer */
 
 	for (box_index = 0; box_index < _basket->boxes_used; box_index++) {
-		const box_t *box               = basket_get_box(_basket, box_index);
-		box_dump_t  *box_dump_header_p = (box_dump_t *)(buf + buf_offset);
+		const box_t *box = basket_get_box(_basket, box_index);
+
+		/* We don't pack boxes with 0 data */
+		if (NULL == box || 0 == bx_used_take(box)) {
+			DDD("Skipping box[%u] because it is empty\n", box_index);
+			continue;
+		}
+
+		box_dump_t  *box_dump_header_p;
+		box_dump_header_p = (box_dump_t *)(buf + buf_offset);
 
 		/* Advance memory byffer pointer bu size of the returned offset */
-		buf_offset += basket_fill_send_box_from_box_t(box_dump_header_p, box);
+		buf_offset += basket_fill_send_box_from_box_t(box_dump_header_p, box, box_index);
+		boxes_dumped++;
 	}
 
 	/*** 3. Dump key/value hash ***/
@@ -714,7 +740,7 @@ FATTR_WARN_UNUSED_RET void *basket_from_buf(void *buf, const size_t size)
 	TESTP(basket, NULL);
 
 	/* Now, we need to pre-allocate ->box pointers; grow it until we have enough */
-	while (basket_buf_header->boxes_num > basket->boxes_allocated) {
+	while (basket_buf_header->boxes_used > basket->boxes_allocated) {
 		if (OK != basket_grow_box_pointers(basket)) {
 			DE("Could not grow ->bufs pointers\n");
 			ABORT_OR_RETURN(NULL);
@@ -723,7 +749,7 @@ FATTR_WARN_UNUSED_RET void *basket_from_buf(void *buf, const size_t size)
 
 	buf_offset = sizeof(basket_send_header_t);
 
-	for (box_index = 0; box_index < basket_buf_header->boxes_num; box_index++) {
+	for (box_index = 0; box_index < basket_buf_header->boxes_dumped; box_index++) {
 
 		/* Advance the pointer to the next box header */
 		box_dump_t *box_dump_header_p = (box_dump_t *)(buf_char + buf_offset);
@@ -753,7 +779,10 @@ FATTR_WARN_UNUSED_RET void *basket_from_buf(void *buf, const size_t size)
 		}
 
 		/* Create a new box */
-		if (OK != box_new_from_data_by_index(basket, box_index, buf_char + buf_offset, box_dump_header_p->box_size)) {
+		if (OK != box_new_from_data_by_index(basket,
+											 box_dump_header_p->box_index,
+											 buf_char + buf_offset,
+											 box_dump_header_p->box_size)) {
 			DE("Adding a buffer size (%u) to tail of box (%u) failed\n", box_dump_header_p->box_size, box_index);
 
 
@@ -767,8 +796,18 @@ FATTR_WARN_UNUSED_RET void *basket_from_buf(void *buf, const size_t size)
 		buf_offset += box_dump_header_p->box_size;
 
 		/* Increase number of used boxes */
-		basket->boxes_used++;
+		// basket->boxes_used++;
 	}
+
+	/* Additional iteration: create boxes from 0 to boxes_used; they must be allocated, otherwise crash unavoidable */
+	for (box_index = 0; box_index < basket_buf_header->boxes_used; box_index++) {
+		if (NULL == basket->boxes[box_index]) {
+			basket->boxes[box_index] = bx_new(0);
+			TESTP_ABORT(basket->boxes[box_index]);
+		}
+	}
+
+	basket->boxes_used = basket_buf_header->boxes_used;
 
 	/*** Restore zhash, is presents ***/
 	if (basket_buf_header->ztable_buf_size > 0) {
@@ -883,7 +922,16 @@ FATTR_WARN_UNUSED_RET ssize_t box_new(void *basket, const void *buffer, const bo
 	basket_t *_basket = basket;
 	box_t    *box;
 	TESTP_ABORT(_basket);
-	TESTP_ABORT(buffer);
+
+	/* If the buffer is a NULL pointer but size if not 0, it is an invalid input */
+	if (buffer == NULL && buffer_size != 0) {
+		MES_ABORT("Wrong: buffer == NULL && buffer_size != 0");
+	}
+
+	/* If the buffer is not a NULL pointer but the size is 0, it is an invalid input */
+	if (buffer != NULL && buffer_size == 0) {
+		MES_ABORT("buffer != NULL && buffer_size == 0");
+	}
 
 	/* Add a new box */
 	if (0 != box_add_new(_basket)) {
@@ -907,7 +955,12 @@ FATTR_WARN_UNUSED_RET ssize_t box_new(void *basket, const void *buffer, const bo
 		ABORT_OR_RETURN(-1);
 	}
 
+	/* The buffer can be NULL, it is a valid situation */
+	if (NULL == buffer) {
+		return basket_get_last_box_index(_basket);
+	}
 	DDD("Going to add data in the tail of a new buf, new data size is %u\n", buffer_size);
+
 	if (OK != bx_add(box, buffer, buffer_size)) {
 		DE("Could not add data into the last (new) box: new data size %u\n", buffer_size);
 		ABORT_OR_RETURN(-1);
