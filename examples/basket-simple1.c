@@ -28,7 +28,7 @@
  */
 void *create_basket(void)
 {
-	ssize_t rc;
+	__attribute__((unused)) ssize_t rc;
 	char *a_string;
 	long a_long;
 
@@ -83,11 +83,10 @@ void *convert_basket_to_buffer(const void *basket)
  */
 int restore_basket_extract_values(void *buf)
 {
-	long a_long;
+	long * a_long;
 	char *a_string;
-	size_t a_string_len;
 	basket_t *basket;
-	ssize_t rc;
+	__attribute__((unused)) ssize_t rc;
 
 	/* First, let's validate the the 'flat buffer' is valid */
 	if (basket_validate_flat_buffer(buf)) {
@@ -106,22 +105,17 @@ int restore_basket_extract_values(void *buf)
 	/* Release the flat buffer, we don't need anymore  */
 	free(buf);
 
-	/* Get the string length from the box 0 */
-	a_string_len = box_data_size(basket, 0);
-	/* Allocate memory for the string */
-	a_string = calloc(1, a_string_len);
-	/* Copy from the box */
-	rc = box_data_copy(basket, 0, a_string, a_string_len);
+	/* Get pointer to string from box 0 */
+	a_string = box_data_ptr(basket, 0);
 
-	/* Copy long value from the box 1 */
-	rc = box_data_copy(basket, 1, &a_long, sizeof(a_long));
+	/* Get pointer to long from box 1 */
+	a_long = box_data_ptr(basket, 1);
 
 	printf("Extracted from the box[0] and box[1]:\n");
 	printf("String: |%s|\n", a_string);
-	printf("Long:   |%ld|\n", a_long);
+	printf("Long:   |%ld|\n", *a_long);
 
-	/* Release everything */
-	free(a_string);
+	/* Release the basket */
 	basket_release(basket);
 	return 0;
 }
