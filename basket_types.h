@@ -6,18 +6,18 @@
 /*** Size of one box ***/
 
 /* Small buffers: Up to 65535 bytes, means 63 Kb  */
-#if defined BOX_SMALL_BUFFER
+#if defined BOX_16_BITS
 
 typedef uint16_t box_type_t;
 #define MAX_VAL_BOX_TYPE (0xFFFF)
 
-#elif defined BOX_MEDIUM_BUFFER
+#elif defined BOX_32_BITS
 #define MAX_VAL_BOX_TYPE (0xFFFFFFFF)
 
 /* Medium buffers: Up to 4,294,967,295 bytes, means 1 Gb  */
 typedef uint32_t box_type_t;
 
-#elif defined BOX_LARGE_BUFFER
+#elif defined BOX_64_BITS
 #define MAX_VAL_BOX_TYPE (0xFFFFFFFFFFFFFFFF)
 
 /* Large buffers: Up to 18,446,744,073,709,551,615 bytes */

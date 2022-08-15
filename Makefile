@@ -18,10 +18,16 @@ ifneq ($(linker),)
 	LD=$(linker)
 endif
 
-DEBUG=-DDERROR3 -DDEBUG2 -ggdb -DABORT_ON_ERROR #-fanalyzer #-DDEBUG3 #-DENABLE_BOX_DUMP
+DEBUG=-DDERROR3 -DDEBUG2 -ggdb -DABORT_ON_ERROR #-DDEBUG3 #-DENABLE_BOX_DUMP #-fanalyzer
 #CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DDEBUG3 -I$(MOSQ_INC) -I./ -I./zhash
 #CFLAGS= $(DEBUG) -Wall -Wextra -rdynamic -O2 -DFIFO_DEBUG -DDEBUG3 -I$(MOSQ_INC) -I./ -I./zhash
-CFLAGS= $(DEBUG) $(INC) -Wall -Wextra -rdynamic -O2 -DFIFO_DEBUG #-fanalyzer
+
+#TYPE_SIZES=-DBOX_LARGE_BUFFER
+#TYPE_SIZES=-DBOX_MEDIUM_BUFFER
+
+TYPE_SIZES=-DBOX_16_BITS -DTICKET_64_BITS -DNUM_BOXES_8_BITS -DWATERMARK_16_BITS -DCHECKSUM_32_BITS
+
+CFLAGS= $(DEBUG) $(INC) $(TYPE_SIZES) -Wall -Wextra -rdynamic -O2 -DFIFO_DEBUG #-fanalyzer
 
 FNV_HASH_O=fnv/hash_32a.o fnv/hash_32.o fnv/hash_64a.o fnv/hash_64.o
 ZHASH_O=zhash3.o murmur3.o checksum.o $(FNV_HASH_O)

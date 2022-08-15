@@ -239,7 +239,7 @@ FATTR_WARN_UNUSED_RET ret_t basket_clean(void *basket)
 			continue;
 		}
 
-		if (OK != bx_free(_basket->boxes[box_index])) {
+		if (A_OK != bx_free(_basket->boxes[box_index])) {
 			DE("Could not free box\n");
 			ABORT_OR_RETURN(-1);
 		}
@@ -338,8 +338,8 @@ FATTR_WARN_UNUSED_RET ret_t box_insert_after(void *basket, const uint32_t after_
 		ABORT_OR_RETURN(-1);
 	}
 
-	if (OK != bx_add(box, buffer, buffer_size)) {
-		if (OK != bx_free(box)) {
+	if (A_OK != bx_add(box, buffer, buffer_size)) {
+		if (A_OK != bx_free(box)) {
 			DE("Could not release box\n");
 		}
 		ABORT_OR_RETURN(-1);
@@ -389,7 +389,7 @@ FATTR_WARN_UNUSED_RET ret_t box_clean(void *basket, const box_u32_t box_index)
 
 	TESTP(box, -1);
 
-	if (OK != bx_clean_and_reset(box)) {
+	if (A_OK != bx_clean_and_reset(box)) {
 		DE("An error on box removal (buf_clean_and_reset failed)\n");
 		ABORT_OR_RETURN(-1);
 	}
@@ -474,7 +474,7 @@ FATTR_WARN_UNUSED_RET ret_t basket_collapse(void *basket)
 			continue;
 		}
 
-		if (OK != bx_merge(_basket->boxes[0], _basket->boxes[box_index])) {
+		if (A_OK != bx_merge(_basket->boxes[0], _basket->boxes[box_index])) {
 			ABORT_OR_RETURN(-1);
 		}
 	}
@@ -566,7 +566,7 @@ static void basket_checksum_set(basket_send_header_t *basket_buf_header_p)
 	/* Start from 'ticket' field */
 	char   *address_to_start = (char *)basket_buf_header_p + start_offset;
 
-	if (0 != checksum_buf_to_32_bit(address_to_start, size_to_count, &basket_buf_header_p->checksum)) {
+	if (0 != checksum_buf_configured(address_to_start, size_to_count, &basket_buf_header_p->checksum)) {
 		DE("Failed to calculate the final buffer checksum");
 		abort();
 	}
@@ -577,7 +577,7 @@ static void basket_checksum_set(basket_send_header_t *basket_buf_header_p)
 int8_t basket_checksum_test(const basket_send_header_t *basket_buf_header_p)
 {
 	int8_t   rc                = -1;
-	uint32_t calculated_sum    = 0XDEADBEEF;
+	checksum_t calculated_sum    = 0XDEADBEEF;
 
 	/* We start the checksum from 'ticket',
 		we do not consider watermark and the checksum fields */
@@ -771,7 +771,7 @@ FATTR_WARN_UNUSED_RET void *basket_from_buf(void *buf, size_t size)
 
 	/* Now, we need to pre-allocate ->box pointers; grow it until we have enough */
 	while (basket_buf_header->boxes_used > basket->boxes_allocated) {
-		if (OK != basket_grow_box_pointers(basket)) {
+		if (A_OK != basket_grow_box_pointers(basket)) {
 			DE("Could not grow ->bufs pointers\n");
 			ABORT_OR_RETURN(NULL);
 		}
@@ -809,7 +809,7 @@ FATTR_WARN_UNUSED_RET void *basket_from_buf(void *buf, size_t size)
 		}
 
 		/* Create a new box */
-		if (OK != box_new_from_data_by_index(basket,
+		if (A_OK != box_new_from_data_by_index(basket,
 											 box_dump_header_p->box_index,
 											 buf_char + buf_offset,
 											 box_dump_header_p->box_size)) {
@@ -870,13 +870,13 @@ FATTR_WARN_UNUSED_RET int8_t box_compare_box(const void *box_left, const void *b
 	}
 
 	if (_box_right->used != _box_left->used) {
-		DDD("box_right->used (%lld) != box_left->used (%lld)\n", _box_right->used, _box_left->used);
+		DDD("box_right->used (%ld) != box_left->used (%ld)\n", (uint64_t) _box_right->used, (uint64_t) _box_left->used);
 		return 1;
 	}
 
 	memcmp_rc = memcmp(_box_right->data, _box_left->data, _box_right->used);
 	if (0 != memcmp_rc) {
-		DDD("box_right->data != box_left->data at %d : data size is %lld\n", memcmp_rc, _box_right->used);
+		DDD("box_right->data != box_left->data at %d : data size is %ld\n", memcmp_rc, (uint64_t) _box_right->used);
 		return 1;
 	}
 
@@ -919,7 +919,7 @@ FATTR_WARN_UNUSED_RET static ret_t box_add_new(void *basket)
 
 	/* If no boxes, we should allocate - call 'grow' func */
 	if (NULL == _basket->boxes) {
-		if (OK != basket_grow_box_pointers(_basket)) {
+		if (A_OK != basket_grow_box_pointers(_basket)) {
 			DE("Can not grow ->boxes pointers\n");
 			ABORT_OR_RETURN(-1);
 		}
@@ -931,7 +931,7 @@ FATTR_WARN_UNUSED_RET static ret_t box_add_new(void *basket)
 	}
 
 	if (_basket->boxes_used == _basket->boxes_allocated) {
-		if (OK != basket_grow_box_pointers(_basket)) {
+		if (A_OK != basket_grow_box_pointers(_basket)) {
 			DE("Could not grow basket->boxes\n");
 			ABORT_OR_RETURN(-1);
 		}
@@ -942,7 +942,7 @@ FATTR_WARN_UNUSED_RET static ret_t box_add_new(void *basket)
 	_basket->boxes_used++;
 	DDD("Allocated a new box, set at index %u\n", _basket->boxes_used - 1);
 	bx_dump(_basket->boxes[_basket->boxes_used - 1], "box_add_new(): added a new box, must be all 0/NULL");
-	return 0;
+	return A_OK;
 }
 
 /* Create a new box in the basket and add data */
@@ -964,14 +964,14 @@ FATTR_WARN_UNUSED_RET ssize_t box_new(void *basket, const void *buffer, const bo
 	}
 
 	/* Add a new box */
-	if (0 != box_add_new(_basket)) {
+	if (A_OK != box_add_new(_basket)) {
 		DE("Can not add another box into Basket\n");
 		ABORT_OR_RETURN(-1);
 	}
 
 	/* We allocated an additional box. Thus, number of boxes MUST be > 0 */
 	if (0 == _basket->boxes_used) {
-		DE("The number of boxes must not be 0 here, but it is\n");
+		DE("The number of boxes must not be 0 here, but it is 0\n");
 		ABORT_OR_RETURN(-1);
 	}
 
@@ -991,7 +991,7 @@ FATTR_WARN_UNUSED_RET ssize_t box_new(void *basket, const void *buffer, const bo
 	}
 	DDD("Going to add data in the tail of a new buf, new data size is %u\n", buffer_size);
 
-	if (OK != bx_add(box, buffer, buffer_size)) {
+	if (A_OK != bx_add(box, buffer, buffer_size)) {
 		DE("Could not add data into the last (new) box: new data size %u\n", buffer_size);
 		ABORT_OR_RETURN(-1);
 	}
@@ -1030,7 +1030,7 @@ FATTR_WARN_UNUSED_RET static ret_t box_new_from_data_by_index(void *basket, box_
 	}
 
 	DDD("Going to add data in the tail of a the buf[%u], new data size is %u\n", box_index, buffer_size);
-	if (OK != bx_add(box, buffer, buffer_size)) {
+	if (A_OK != bx_add(box, buffer, buffer_size)) {
 		DE("Could not add data into the new box[%u]: new data size %u\n", box_index, buffer_size);
 		ABORT_OR_RETURN(-1);
 	}
@@ -1041,7 +1041,7 @@ FATTR_WARN_UNUSED_RET static ret_t box_new_from_data_by_index(void *basket, box_
 	_basket->boxes[box_index] = box;
 
 	/* Return the number of the new box */
-	return OK;
+	return A_OK;
 }
 
 /* Add data to a basket */

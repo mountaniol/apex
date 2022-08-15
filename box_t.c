@@ -65,24 +65,39 @@ void bx_dump(const box_t *box, const char *mes)
 		return;
 	}
 
-	DD("box_t data ptr:       %p\n", bx_data_take(box));
+	DD("box_t data ptr:       %p\n",   bx_data_take(box));
 	DD("box_t used:           %lld\n", bx_used_take(box));
 	DD("box_t room:           %lld\n", bx_room_take(box));
+	DD("box_t members:        %lld\n", bx_members_take(box));
 	DD("========================\n");
 }
 #else
 void bx_dump(__attribute__((unused)) const box_t *box, __attribute__((unused)) const char *mes)
-{
-}
+{ }
 #endif /* BOX_DUMP */
+
+/* This function tests size against the chosen box_typee_t;
+   if the given size is in limits of the size, it returns 0, else it will return 1 */
+int bx_if_size_fits_box_type(ssize_t size)
+{
+	if (size < 0) {
+		return -1;
+	}
+
+	if ((size_t)size > (size_t)MAX_VAL_BOX_TYPE) {
+		return 1;
+	}
+
+	return 0;
+}
 
 /*************************************************************************
  *** Get (Take), Set, INcrease and Decrease value of 'used' and 'room' ***
  *************************************************************************/
 
-FATTR_WARN_UNUSED_RET
-FATTR_CONST
-box_s64_t bx_used_take(const box_t *box)
+/*** box->used field ***/
+
+FATTR_WARN_UNUSED_RET FATTR_CONST box_s64_t bx_used_take(const box_t *box)
 {
 	TESTP_ABORT(box);
 	return (box->used);
@@ -91,37 +106,112 @@ box_s64_t bx_used_take(const box_t *box)
 void bx_used_set(box_t *box, const box_s64_t used)
 {
 	TESTP_ABORT(box);
+
+	if (bx_if_size_fits_box_type(used)) {
+		DE("The asked size is too large for the box\n");
+		abort();
+	}
 	box->used = used;
 }
 
 void bx_used_inc(box_t *box, const box_s64_t inc)
 {
 	TESTP_ABORT(box);
+
+	/* Test that the new value fits current data type */
+	if (bx_if_size_fits_box_type(box->used + inc)) {
+		DE("The asked size is too large for the box\n");
+		abort();
+	}
 	box->used += inc;
 }
 
 void bx_used_dec(box_t *box, const box_s64_t dec)
 {
 	TESTP_ABORT(box);
+
+	if (bx_if_size_fits_box_type(dec)) {
+		DE("The asked size is too large for the box\n");
+		abort();
+	}
 	if (dec > bx_used_take(box)) {
 		DE("Tried to decrement 'box->used' such that it will be < 0: current %ld, asked decrement %ld\n",
-		   box->room, dec);
+		   (uint64_t)box->used, dec);
 		TRY_ABORT();
 	}
 
-	if (box->used >= dec) {
-		box->used -= dec;
+	if (box->used >= (box_type_t)dec) {
+		box->used -= (box_type_t)dec;
 	} else {
 		DE("Tried to decrement 'box->used' such that it will be < 0: current %ld, asked decrement %ld\n",
-		   box->room, dec);
+		   (uint64_t)box->used, dec);
 		TRY_ABORT();
 		box->used = 0;
 	}
 }
 
-FATTR_WARN_UNUSED_RET
-FATTR_CONST
-box_s64_t bx_room_take(const box_t *box)
+/*** End of box->used field ***/
+
+/*** box->members field ***/
+
+FATTR_WARN_UNUSED_RET FATTR_CONST box_s64_t bx_members_take(const box_t *box)
+{
+	TESTP_ABORT(box);
+	return (box->members);
+}
+
+void bx_members_set(box_t *box, const box_s64_t members)
+{
+	TESTP_ABORT(box);
+
+	if (bx_if_size_fits_box_type(members)) {
+		DE("The asked number of members is too large for the current type\n");
+		abort();
+	}
+	box->members = members;
+}
+
+void bx_members_inc(box_t *box, const box_s64_t inc)
+{
+	TESTP_ABORT(box);
+
+	/* Test that the new value fits the current data type */
+	if (bx_if_size_fits_box_type(box->members + inc)) {
+		DE("The number of members is too large for the box\n");
+		abort();
+	}
+	box->members += inc;
+}
+
+void bx_members_dec(box_t *box, const box_s64_t dec)
+{
+	TESTP_ABORT(box);
+
+	if (bx_if_size_fits_box_type(dec)) {
+		DE("The asked size is too large for the box\n");
+		abort();
+	}
+	if (dec > bx_members_take(box)) {
+		DE("Tried to decrement 'box->members' such that it will be < 0: current %ld, asked decrement %ld\n",
+		   (uint64_t)box->members, dec);
+		TRY_ABORT();
+	}
+
+	if (box->members >= (box_type_t)dec) {
+		box->members -= (box_type_t)dec;
+	} else {
+		DE("Tried to decrement 'box->members' such that it will be < 0: current %ld, asked decrement %ld\n",
+		   (uint64_t)box->members, dec);
+		TRY_ABORT();
+		box->members = 0;
+	}
+}
+
+/*** End of box->members field ***/
+
+/*** box->room field ***/
+
+FATTR_WARN_UNUSED_RET FATTR_CONST box_s64_t bx_room_take(const box_t *box)
 {
 	TESTP_ABORT(box);
 	return (box->room);
@@ -130,38 +220,56 @@ box_s64_t bx_room_take(const box_t *box)
 void bx_room_set(box_t *box, const box_s64_t room)
 {
 	TESTP_ABORT(box);
-	DDD("Setting box room: %lld\n", room);
+	if (bx_if_size_fits_box_type(room)) {
+		DE("The asked size of room (%ld) is too large for the current data type (%ld)\n",
+		   room, (uint64_t)MAX_VAL_BOX_TYPE);
+		abort();
+	}
+	DDD("Setting box room: %ld\n", room);
 	box->room = room;
 }
 
 void bx_room_inc(box_t *box, const box_s64_t inc)
 {
 	TESTP_ABORT(box);
-	DDD("Inc box room: %lld + %lld\n", box->room, inc);
+	if (bx_if_size_fits_box_type(inc)) {
+		DE("The asked size is too large for the box\n");
+		abort();
+	}
+
+	DDD("Inc box room: %ld + %ld\n", (uint64_t)box->room, inc);
+
 	box->room += inc;
 }
 
 void bx_room_dec(box_t *box, const box_s64_t dec)
 {
 	TESTP_ABORT(box);
+
+	if (bx_if_size_fits_box_type(dec)) {
+		DE("The asked size is too large for the box\n");
+		abort();
+	}
+
 	if (dec > bx_room_take(box)) {
 		DE("Asked to decrement box->room to a negative value");
 		TRY_ABORT();
 	}
 
-	DDD("Dec box room: %lld - %lld\n", box->room, dec);
 
-	if (box->room >= dec) {
-		box->room -= dec;
+	DDD("Dec box room: %ld - %ld\n", (uint64_t)box->room, dec);
+
+	if (box->room >= (box_type_t)dec) {
+		box->room -= (box_type_t)dec;
 	} else {
 		box->room = 0;
 	}
 }
 
+/*** End of box->room field ***/
+
 /* Validate sanity of box_t - common for all boxes */
-FATTR_WARN_UNUSED_RET
-FATTR_CONST
-ret_t bx_is_valid(const box_t *box, const char *who, const int line)
+FATTR_WARN_UNUSED_RET FATTR_CONST ret_t bx_is_valid(const box_t *box, const char *who, const int line)
 {
 	TESTP_ABORT(box);
 
@@ -174,9 +282,28 @@ ret_t bx_is_valid(const box_t *box, const char *who, const int line)
 		return (-ECANCELED);
 	}
 
-	/* The box->data may be NULL if and only if both box->used and box->room == 0; However, we don't
-	   check box->used: we tested that it <= box->room already */
-	if ((NULL == box->data) && (bx_room_take(box) > 0)) {
+	/* Always: box->members <= box->used box->used always <= box->room */
+	if (bx_used_take(box) < bx_members_take(box)) {
+		DE("/%s +%d/ : Invalid box: box->used (%ld) < box->members (%ld)\n",
+		   who, line, bx_used_take(box), bx_members_take(box));
+		bx_dump(box, "from box_is_valid(), before terminating 1");
+		TRY_ABORT();
+		return (-ECANCELED);
+	}
+
+	/* Always: if box->used > 0, the box->members > 0 as well */
+	if (0 != bx_used_take(box) && 0 == bx_members_take(box)) {
+		DE("/%s +%d/ : Invalid box: box->used (%ld) > 0, box->members (%ld) == 0\n",
+		   who, line, bx_used_take(box), bx_members_take(box));
+		bx_dump(box, "from box_is_valid(), before terminating 1");
+		TRY_ABORT();
+		return (-ECANCELED);
+	}
+
+	/* The box->data can be NULL if and only if (box->used + box->room + box->members) == 0;
+	 * However, we don't check box->used: we tested that it <= box->room already */
+	if ((NULL == box->data) &&
+		((bx_room_take(box) +  bx_used_take(box) + bx_members_take(box)) > 0)) {
 		DE("/%s +%d/ : Invalid box: box->data == NULL but box->room > 0 (%ld) / box->used (%ld)\n",
 		   who, line, bx_room_take(box), bx_used_take(box));
 		bx_dump(box, "from box_is_valid(), before terminating 2");
@@ -192,21 +319,24 @@ ret_t bx_is_valid(const box_t *box, const char *who, const int line)
 		return (-ECANCELED);
 	}
 
+
+
 	DDD0("/%s +%d/: Box is valid\n", who, line);
-	return (OK);
+	return (A_OK);
 }
 
-FATTR_WARN_UNUSED_RET
-box_t *bx_new(const box_s64_t size)
+FATTR_WARN_UNUSED_RET box_t *bx_new(const box_s64_t size)
 {
 	box_t  *box;
-	size_t real_size;
 
 	if (size < 0) {
 		ABORT_OR_RETURN(NULL);
 	}
 
-	real_size = size;
+	if (bx_if_size_fits_box_type(size)) {
+		DE("The asked size is too large for the box\n");
+		abort();
+	}
 
 	box = (box_t *)zmalloc(sizeof(box_t));
 	T_RET_ABORT(box, NULL);
@@ -214,7 +344,7 @@ box_t *bx_new(const box_s64_t size)
 	/* If a size is given than allocate a data */
 	if (size > 0) {
 
-		box->data = (char *)zmalloc(real_size);
+		box->data = (char *)zmalloc(size);
 		TESTP_ASSERT(box->data, "Can't allocate box->data");
 	}
 
@@ -224,10 +354,13 @@ box_t *bx_new(const box_s64_t size)
 	/* Assigned value to box->used field */
 	bx_used_set(box, 0);
 
+	/* Used == 0, means members == 0 */
+	bx_members_set(box, 0);
+
 	/* Just in case, check that the box_t looks valid */
-	if (OK != bx_is_valid(box, __func__, __LINE__)) {
+	if (A_OK != bx_is_valid(box, __func__, __LINE__)) {
 		DE("Box is invalid right after allocation!\n");
-		if (OK != bx_free(box)) {
+		if (A_OK != bx_free(box)) {
 			DE("Can not free the box\n");
 		}
 		TRY_ABORT();
@@ -237,21 +370,39 @@ box_t *bx_new(const box_s64_t size)
 	return (box);
 }
 
-FATTR_WARN_UNUSED_RET
-FATTR_CONST
-ret_t bx_data_set(box_t *box, char *data, const box_s64_t size, const box_s64_t len)
+FATTR_WARN_UNUSED_RET FATTR_CONST ret_t bx_data_set(box_t *box, char *data, const box_s64_t size, const box_s64_t len)
 {
 	TESTP_ABORT(box);
 	TESTP_ABORT(data);
 
+	if (bx_if_size_fits_box_type(size)) {
+		DE("The asked size is too large for the box\n");
+		abort();
+	}
+
+	if (bx_if_size_fits_box_type(len)) {
+		DE("The asked size is too large for the box\n");
+		abort();
+	}
+
 	box->data = data;
 	bx_room_set(box, size);
 	bx_used_set(box, len);
-	return (OK);
+
+	/* In case the box was set data from no data state, we increase members to 1 */
+	if (bx_used_take(box) > 0 && 0 == bx_members_take(box)) {
+		bx_members_set(box, 1);
+	}
+
+	/* In case the box was set data to NULL, we reset members to 0 */
+	if (0 == bx_used_take(box) && bx_members_take(box) > 0) {
+		bx_members_set(box, 0);
+	}
+
+	return (A_OK);
 }
 
-FATTR_WARN_UNUSED_RET
-void *bx_data_steal(box_t *box)
+FATTR_WARN_UNUSED_RET void *bx_data_steal(box_t *box)
 {
 	/* Keep temporarly pointer of intennal data buffer */
 	void *data;
@@ -260,20 +411,17 @@ void *bx_data_steal(box_t *box)
 	box->data = NULL;
 	bx_room_set(box, 0);
 	bx_used_set(box, 0);
+	bx_members_set(box, 0);
 	return (data);
 }
 
-FATTR_WARN_UNUSED_RET
-FATTR_CONST
-void *bx_data_take(const box_t *box)
+FATTR_WARN_UNUSED_RET FATTR_CONST void *bx_data_take(const box_t *box)
 {
 	TESTP_ABORT(box);
 	return (box->data);
 }
 
-FATTR_WARN_UNUSED_RET
-FATTR_CONST
-ret_t bx_is_data_null(const box_t *box)
+FATTR_WARN_UNUSED_RET FATTR_CONST ret_t bx_is_data_null(const box_t *box)
 {
 	TESTP_ABORT(box);
 	if (NULL == box->data) {
@@ -299,7 +447,7 @@ FATTR_WARN_UNUSED_RET static ret_t bx_realloc(box_t *box, const size_t new_size)
 	//DDD("Allocated size %zu\n", new_size);
 
 	if (NULL == tmp) {
-		DE("New memory alloc failed: current size = %ld, asked size = %zu\n", box->room, new_size);
+		DE("New memory alloc failed: current size = %ld, asked size = %zu\n", (uint64_t)box->room, new_size);
 		ABORT_OR_RETURN(-ENOMEM);
 	}
 
@@ -311,7 +459,7 @@ FATTR_WARN_UNUSED_RET static ret_t bx_realloc(box_t *box, const size_t new_size)
 	}
 
 	box->data = tmp;
-	return OK;
+	return A_OK;
 }
 
 /* This is an internal function. Here we realloc the internal box_t buffer */
@@ -335,7 +483,7 @@ static ret_t box_realloc_old(box_t *box, size_t new_size){
 		free(box->data);
 		box->data = (char *)tmp;
 	}
-	return OK;
+	return A_OK;
 }
 #endif
 
@@ -343,6 +491,11 @@ FATTR_WARN_UNUSED_RET ret_t bx_room_add_memory(box_t *box, const box_s64_t sz)
 {
 	size_t original_room_size;
 	TESTP_ABORT(box);
+
+	if (bx_if_size_fits_box_type(sz)) {
+		DE("The asked size is too large for the box\n");
+		abort();
+	}
 
 	bx_dump(box, "box_room_add_memory(): Before adding memory");
 	if (0 == sz) {
@@ -353,7 +506,7 @@ FATTR_WARN_UNUSED_RET ret_t bx_room_add_memory(box_t *box, const box_s64_t sz)
 	/* Save the */
 	original_room_size = bx_room_take(box);
 
-	if (OK != bx_realloc(box, original_room_size + sz)) {
+	if (A_OK != bx_realloc(box, original_room_size + sz)) {
 		DE("Can not reallocate box->data\n");
 		ABORT_OR_RETURN(-ENOMEM);
 	}
@@ -373,13 +526,11 @@ FATTR_WARN_UNUSED_RET ret_t bx_room_add_memory(box_t *box, const box_s64_t sz)
 	// box_dump(box, "After adding memory");
 
 	BOX_TEST(box);
-	return (OK);
+	return (A_OK);
 }
 
 /* Return how much bytes is available in the box_t */
-FATTR_WARN_UNUSED_RET
-FATTR_CONST
-box_s64_t bx_room_avaialable_take(const box_t *box)
+FATTR_WARN_UNUSED_RET FATTR_CONST box_s64_t bx_room_avaialable_take(const box_t *box)
 {
 	box_s64_t m_used = -1;
 	box_s64_t m_room = -1;
@@ -404,6 +555,11 @@ FATTR_WARN_UNUSED_RET ret_t bx_room_assure(box_t *box, const box_s64_t expect)
 {
 	TESTP_ABORT(box);
 
+	if (bx_if_size_fits_box_type(box->room + expect)) {
+		DE("The asked size is too large for the box\n");
+		abort();
+	}
+
 	/* It is meanless to pass expected == 0 */
 	if (expect < 1) {
 		DE("'expected' size <= 0 : %ld\n", expect);
@@ -411,9 +567,9 @@ FATTR_WARN_UNUSED_RET ret_t bx_room_assure(box_t *box, const box_s64_t expect)
 		return (-EINVAL);
 	}
 
-	/* If we have enough room, return OK */
+	/* If we have enough room, return A_OK */
 	if (bx_room_avaialable_take(box) >= expect) {
-		return (OK);
+		return (A_OK);
 	}
 
 	return (bx_room_add_memory(box, expect));
@@ -423,20 +579,20 @@ FATTR_WARN_UNUSED_RET ret_t bx_clean_and_reset(box_t *box)
 {
 	TESTP_ABORT(box);
 
-	if (OK != bx_is_valid(box, __func__, __LINE__)) {
+	if (A_OK != bx_is_valid(box, __func__, __LINE__)) {
 		DE("Warning: box is invalid\n");
 	}
 
 	if (box->data) {
 		/* Security: zero memory before it freed */
-		DDD("Cleaning before free, data %p, size %lld\n", box->data, bx_room_take(box));
+		DDD("Cleaning before free, data %p, size %ld\n", box->data, bx_room_take(box));
 		memset(box->data, 0, bx_room_take(box));
 		free(box->data);
 		box->data = NULL;
 	}
 
 	memset(box, 0, sizeof(box_t));
-	return (OK);
+	return (A_OK);
 }
 
 FATTR_WARN_UNUSED_RET ret_t bx_free(box_t *box)
@@ -444,7 +600,7 @@ FATTR_WARN_UNUSED_RET ret_t bx_free(box_t *box)
 	TESTP_ABORT(box);
 
 	/* Just in case, test that the box_t is valid */
-	if (OK != bx_is_valid(box, __func__, __LINE__)) {
+	if (A_OK != bx_is_valid(box, __func__, __LINE__)) {
 		DE("Warning: box is invalid\n");
 		return -1;
 	}
@@ -455,16 +611,21 @@ FATTR_WARN_UNUSED_RET ret_t bx_free(box_t *box)
 	}
 	/* Release the box_t struct */
 	TFREE_SIZE(box, sizeof(box_t));
-	return (OK);
+	return (A_OK);
 }
 
 /* Copy the given buffer "new_data" at tail of the buf_t */
 FATTR_WARN_UNUSED_RET ret_t bx_add(box_t *box /* box_t to add into */,
-			  const char *new_data /* Buffer to add */,
-			  const box_s64_t sz /* Size of the buffer to add */)
+								   const char *new_data /* Buffer to add */,
+								   const box_s64_t sz /* Size of the buffer to add */)
 {
 	TESTP_ABORT(box);
 	TESTP_ABORT(new_data);
+
+	if (bx_if_size_fits_box_type(box->room + sz)) {
+		DE("The asked size is too large for the box\n");
+		abort();
+	}
 
 	/* We can not add buffer of 0 bytes or less; probably , if we here it is a bug */
 	if (sz < 1) {
@@ -473,7 +634,7 @@ FATTR_WARN_UNUSED_RET ret_t bx_add(box_t *box /* box_t to add into */,
 	}
 
 	/* Assure that we have enough room to add this buffer */
-	if (OK != bx_room_assure(box, sz)) {
+	if (A_OK != bx_room_assure(box, sz)) {
 		DE("Can't add room into box_t\n");
 		ABORT_OR_RETURN(-ENOMEM);
 	}
@@ -482,11 +643,18 @@ FATTR_WARN_UNUSED_RET ret_t bx_add(box_t *box /* box_t to add into */,
 
 	/* And now we are adding the buffer at the tail */
 	memcpy(box->data + bx_used_take(box), new_data, sz);
+
 	/* Increase the box->used */
 	bx_used_inc(box, sz);
 
+
+	/* If the box was empty, and now it increased, we need to set members == 1 */
+	if (bx_used_take(box) > 0 && 0 == bx_members_take(box)) {
+		bx_members_set(box, 1);
+	}
+
 	BOX_TEST(box);
-	return (OK);
+	return (A_OK);
 }
 
 FATTR_WARN_UNUSED_RET ret_t bx_merge(box_t *dst, box_t *src)
@@ -497,12 +665,12 @@ FATTR_WARN_UNUSED_RET ret_t bx_merge(box_t *dst, box_t *src)
 	TESTP_ABORT(src);
 	rc = bx_add(dst, src->data, src->used);
 
-	if (OK != rc) {
+	if (A_OK != rc) {
 		DE("The box_add() failed\n");
 		ABORT_OR_RETURN(rc);
 	}
 
-	if (OK != bx_clean_and_reset(src)) {
+	if (A_OK != bx_clean_and_reset(src)) {
 		DE("Could not clean 'src' box\n");
 		ABORT_OR_RETURN(-ECANCELED);
 	}
@@ -511,8 +679,8 @@ FATTR_WARN_UNUSED_RET ret_t bx_merge(box_t *dst, box_t *src)
 
 /* Replace the internal box buffer with the buffer "new_data" */
 FATTR_WARN_UNUSED_RET ret_t bx_replace_data(box_t *box /* box_t to replace data in */,
-				  const char *new_data /* Buffer to copy into the box_t */,
-				  const box_s64_t size /* Size of the new buffer to set */)
+											const char *new_data /* Buffer to copy into the box_t */,
+											const box_s64_t size /* Size of the new buffer to set */)
 {
 	box_s64_t current_room_size;
 
@@ -521,6 +689,11 @@ FATTR_WARN_UNUSED_RET ret_t bx_replace_data(box_t *box /* box_t to replace data 
 	   If one needs to reset the box_t, there is a dedicated funtion for this task */
 	TESTP_ABORT(box);
 	TESTP_ABORT(new_data);
+
+	if (bx_if_size_fits_box_type(size)) {
+		DE("The asked size is too large for the box\n");
+		abort();
+	}
 
 	/* We can not add buffer of 0 bytes or less; probably , if we here it is a bug */
 	if (size < 1) {
@@ -534,7 +707,7 @@ FATTR_WARN_UNUSED_RET ret_t bx_replace_data(box_t *box /* box_t to replace data 
 
 	/* Assure that we have enough room to set the new buffer */
 	if (size > current_room_size &&  /* If size of the new buffer bigger than current buffer */
-		OK != bx_room_assure(box, size - current_room_size)) { /* And if we could not allocated additional memory */
+		A_OK != bx_room_assure(box, size - current_room_size)) { /* And if we could not allocated additional memory */
 		DE("Can't add room into box_t\n");
 		TRY_ABORT();
 		return (-ENOMEM);
@@ -547,7 +720,7 @@ FATTR_WARN_UNUSED_RET ret_t bx_replace_data(box_t *box /* box_t to replace data 
 	bx_used_set(box, size);
 
 	BOX_TEST(box);
-	return (OK);
+	return (A_OK);
 }
 
 

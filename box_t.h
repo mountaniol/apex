@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <sys/types.h>
 #include "codes.h"
+#include "basket_types.h"
 
 #define BUF_NOISY
 #include <stdint.h>
@@ -61,12 +62,16 @@ typedef int64_t box_s64_t;
 typedef uint32_t box_u32_t;
 
 /**
- * Simple struct to hold a buffer / string and its size / lenght
+ * Simple structure to hold a buffer / string and its size /
+ * lenght
+ * See related structure in basket.h::box_dump_t
  */
 typedef struct {
-	box_s64_t room;	/**< Allocated size */
-	box_s64_t used;	/**< Used size */
-	char *data;		/**< Pointer to data */
+	box_type_t room;        /**< Allocated size */
+	box_type_t used;        /**< Used size */
+	box_type_t members;     /**< Used size */
+	ticket_t   ticket;     	/**< Used size */
+	char *data;             /**< Pointer to data */
 } box_t;
 
 /** If there is 'abort on error' is set, this macro stops
@@ -287,7 +292,7 @@ extern ret_t bx_merge(box_t *dst, box_t *src);
  *  		must be not NULL, and its size must be > 0,
  *  		otherwise this function fails or returns an error.
  */
-ret_t bx_replace_data(box_t *buf, const char *new_data, const box_s64_t size );
+ret_t bx_replace_data(box_t *buf, const char *new_data, const box_s64_t size);
 
 /**
  * @author Sebastian Mountaniol (14/06/2020)

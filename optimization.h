@@ -79,5 +79,4 @@
  */
 #define FATTR_WARN_UNUSED_RET __attribute__((warn_unused_result))
 
-
 #endif /* OPTIMIZATION_H_ */

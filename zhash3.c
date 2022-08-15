@@ -160,7 +160,7 @@ void zhash_dump(const ztable_t *hash_table, __attribute__((unused))const char *n
 		entry = entries[ii];
 		while (entry) {
 			DDD("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
-			DDD(">>> Entry: %p, ->next: %p, key_int: %llX, key_str: |%s|, key_str_len: %u, val: %p, val_size: %u\n",
+			DDD(">>> Entry: %p, ->next: %p, key_int: %lX, key_str: |%s|, key_str_len: %u, val: %p, val_size: %u\n",
 				entry, entry->next, entry->Key.key_int64, entry->Key.key_str, entry->Key.key_str_len, entry->Val.val, entry->Val.val_size);
 			entry = entry->next;
 		}
@@ -303,7 +303,7 @@ static zentry_t *zhash_find_entry_by_int(const ztable_t *hash_table, const uint6
 	zentry_t     *entry;
 	const size_t hash   = zhash_entry_index_by_int(hash_table, key_int64);
 	entry = hash_table->entries[hash];
-	DDD("Search for key: %llX\n", key_int64);
+	DDD("Search for key: %lX\n", key_int64);
 	while (entry) {
 		if (key_int64 == entry->Key.key_int64) {
 			break;
@@ -312,9 +312,9 @@ static zentry_t *zhash_find_entry_by_int(const ztable_t *hash_table, const uint6
 	}
 
 	if (entry) {
-		DDD("Found key: %llX, the str key: %s\n", key_int64, entry->Key.key_str);
+		DDD("Found key: %lX, the str key: %s\n", key_int64, entry->Key.key_str);
 	} else {
-		DDD("For key: %llX, no entry found, returning NULL\n", key_int64);
+		DDD("For key: %lX, no entry found, returning NULL\n", key_int64);
 	}
 	return entry;
 }
@@ -335,7 +335,7 @@ FATTR_WARN_UNUSED_RET FATTR_CONST FATTR_NONULL(1)
 static void *zhash_entry_find_by_str(const ztable_t *hash_table, char *key_str, const size_t key_str_len)
 {
 	uint64_t key_int64 = zhash_key_int64_from_key_str(key_str, key_str_len);
-	DDD("Calculated key_int: %llX\n", key_int64);
+	DDD("Calculated key_int: %lX\n", key_int64);
 	return zhash_find_entry_by_int(hash_table, key_int64);
 }
 
@@ -396,7 +396,7 @@ FATTR_WARN_UNUSED_RET FATTR_HOT int8_t zhash_insert_by_str(ztable_t *hash_table,
 	char     *key_str_copy;
 	uint64_t key_int64     = zhash_key_int64_from_key_str(key_str, key_str_len);
 
-	DDD("Calculated key_int: %llX\n", key_int64);
+	DDD("Calculated key_int: %lX\n", key_int64);
 	key_str_copy = strndup(key_str, key_str_len);
 	if (NULL == key_str_copy) {
 		DE("Could not duplicate string key");
@@ -426,7 +426,7 @@ FATTR_WARN_UNUSED_RET FATTR_HOT void *zhash_find_by_int(const ztable_t *hash_tab
 FATTR_WARN_UNUSED_RET FATTR_HOT void *zhash_find_by_str(const ztable_t *hash_table, char *key_str, const size_t key_str_len, ssize_t *val_size)
 {
 	uint64_t key_int64 = zhash_key_int64_from_key_str(key_str, key_str_len);
-	DDD("Calculated key_int: %llX\n", key_int64);
+	DDD("Calculated key_int: %lX\n", key_int64);
 	return zhash_find_by_int(hash_table, key_int64, val_size);
 
 }
@@ -681,7 +681,7 @@ FATTR_WARN_UNUSED_RET ztable_t *zhash_from_buf(const char *buf, const size_t siz
 		memcpy(val, (buf + offset), zent->val_size);
 		offset += zent->val_size;
 
-		DDD("Inserting: zt = %p, zent->key_int64 = %llX, key_str = |%s|, zent->key_str_len = %u, val = %p, zent->val_size = %u\n",
+		DDD("Inserting: zt = %p, zent->key_int64 = %lX, key_str = |%s|, zent->key_str_len = %u, val = %p, zent->val_size = %u\n",
 			zt, zent->key_int64, 
 			(NULL != key_str) ? key_str : "NULL",
 			zent->key_str_len, val, zent->val_size);
@@ -748,15 +748,15 @@ FATTR_WARN_UNUSED_RET FATTR_COLD int8_t zhash_cmp_zhash(const ztable_t *left, co
 			/*** TEST 1: The record from the left not found in the right ***/
 
 			if (NULL == entry_right) {
-				DDD("For left entry no right entry: int key %llX, str entry %s\n",
+				DDD("For left entry no right entry: int key %lX, str entry %s\n",
 					entry_left->Key.key_int64, entry_left->Key.key_str);
 				return 1;
 			}
 
-			DDD(">>> Entry Left: %p, ->next: %p, key_int: %llX, key_str: |%s|\n",
+			DDD(">>> Entry Left: %p, ->next: %p, key_int: %lX, key_str: |%s|\n",
 				entry_left, entry_left->next, entry_left->Key.key_int64, entry_left->Key.key_str);
 
-			DDD(">>> Entry Right: %p, ->next: %p, key_int: %llX, key_str: |%s|\n",
+			DDD(">>> Entry Right: %p, ->next: %p, key_int: %lX, key_str: |%s|\n",
 				entry_right, entry_right->next, entry_right->Key.key_int64, entry_right->Key.key_str);
 
 			/*** TEST 2: The left's string length not match right's ***/
@@ -772,7 +772,7 @@ FATTR_WARN_UNUSED_RET FATTR_COLD int8_t zhash_cmp_zhash(const ztable_t *left, co
 
 			if (0 != strcmp(entry_left->Key.key_str, entry_right->Key.key_str)) {
 				zentry_t *entry_tmp;
-				DDD("Left->string key len not match Right->string key len : %s != %s ; in key : %llX <--> %llX\n",
+				DDD("Left->string key len not match Right->string key len : %s != %s ; in key : %lX <--> %lX\n",
 					entry_left->Key.key_str,
 					entry_right->Key.key_str,
 					entry_left->Key.key_int64,

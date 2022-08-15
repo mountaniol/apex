@@ -334,7 +334,11 @@ static basket_t *basket_new_test(void)
 
 static int box_new_from_data_test(void)
 {
+	#ifndef NUM_BOXES_8_BITS
 	uint32_t  boxes_in_test[]   = {0, 1, 10, 100, 1024};
+	#else
+	uint32_t  boxes_in_test[]   = {0, 1, 10, 100, 254};
+	#endif
 	uint32_t  number_of_tests   = sizeof(boxes_in_test) / sizeof(uint32_t);
 	uint32_t  i;
 
@@ -369,7 +373,7 @@ static int box_new_from_data_test(void)
 
 		/* Iterate all boxes in the basket */
 		for (box_iterator = 0; box_iterator < number_of_boxes; box_iterator++) {
-			DDD("[TEST] Going to add a new data into buf[%u], new data size is %lld\n", box_iterator, lorem_ipsum_size);
+			DDD("[TEST] Going to add a new data into buf[%u], new data size is %ld\n", box_iterator, lorem_ipsum_size);
 
 			PR3("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ %.4u ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n", box_iterator);
 
@@ -435,6 +439,7 @@ static int box_new_from_data_simple_test(void)
 	char      *internal_data;
 	box_s64_t lorem_ipsum_size  = (box_s64_t)strnlen(lorem_ipsum, 4096);
 	int       basket_sz;
+	int       basket_data_sz;
 
 	/* Create an empty basket and add a new box */
 	basket = basket_new();
@@ -482,9 +487,11 @@ static int box_new_from_data_simple_test(void)
 	}
 
 	basket_sz = basket_memory_size(basket);
+	basket_data_sz = basket_data_size (basket);
 	basket_release(basket);
 
-	PR("[TEST] Success: Created, filled, tested and destroyed basket with %d boxes, size was: %d\n", 1, basket_sz);
+	PR("[TEST] Success: Created, filled, tested and destroyed basket with %d boxes, basket size was: %d, data size: %d\n",
+	   2, basket_sz, basket_data_sz);
 	return 0;
 }
 
@@ -686,7 +693,7 @@ static void basket_regular_collapse_in_place_test(void)
 	}
 
 	rc = basket_collapse(basket);
-	if (OK != rc) {
+	if (A_OK != rc) {
 		DE("[TEST] Failed basket collapsing in place\n");
 		abort();
 	}
@@ -702,7 +709,7 @@ static void basket_regular_collapse_in_place_test(void)
 		abort();
 	}
 
-	if (OK != basket_release(basket)) {
+	if (A_OK != basket_release(basket)) {
 		DE("[TEST] Failed basket releasing\n");
 		abort();
 	}
@@ -724,7 +731,7 @@ static void basket_irregular_collapse_in_place_test(void)
 	}
 
 	rc = basket_collapse(basket);
-	if (OK != rc) {
+	if (A_OK != rc) {
 		DE("[TEST] Failed basket collapsing in place\n");
 		abort();
 	}
@@ -740,7 +747,7 @@ static void basket_irregular_collapse_in_place_test(void)
 		abort();
 	}
 
-	if (OK != basket_release(basket)) {
+	if (A_OK != basket_release(basket)) {
 		DE("[TEST] Failed basket releasing\n");
 		abort();
 	}
@@ -997,8 +1004,7 @@ int main(void)
 	zhash_to_buf_and_back();
 	add_many_items_test(1000);
 	add_many_items_test(1024 * 1024 * 10);
-	//add_many_items_test();
-
+	
 	/* Basket and Box tests */
 	PR("\nSECTION 2: BOX\n");
 	box_new_from_data_simple_test();

@@ -47,45 +47,33 @@
 
 /**
  * @def
- * @details Used to mark basket structure when creating a flat mamory buffer from a basket
- */
-#define WATERMARK_BASKET (0xBAFFA779)
-/**
- * @def
- * @details Used to mark a box structure when dumped it into a
- *  		flat memory buffer
- */
-#define WATERMARK_BOX (0xBAFFA773)
-
-/**
- * @def
  * @details How many basket->bufs pointers allocated at once
  */
 #define BASKET_BUFS_GROW_RATE (1)
 
 typedef struct {
 	void **boxes; /**< Array of buf_t structs */
-	uint64_t ticket; /**< Ticket is for free use. End use can put here whatever she/he wants. */
-	box_u32_t boxes_used; /**< Number of bufs in the array */
-	box_u32_t boxes_allocated; /**< For internal use: how many buf_t pointers are allocated in the 'bufs' */
+	ticket_t ticket; /**< Ticket is for free use. End use can put here whatever she/he wants. */
+	num_boxes_t boxes_used; /**< Number of bufs in the array */
+	num_boxes_t boxes_allocated; /**< For internal use: how many buf_t pointers are allocated in the 'bufs' */
 	ztable_t *zhash; /**< Zhash: the Zhash table, for key/value keeping */
 } basket_t;
 
-typedef struct __attribute__((packed)) {
+typedef struct __attribute__((packed)){
 	uint32_t watermark; /**< Watermark: filled with a predefined pattern WATERMARK_BOX */
-	uint32_t box_index; /** The< size of the box, not include ::box_size and ::box_checksum fields */
-	uint32_t box_size; /** The< size of the box, not include ::box_size and ::box_checksum fields */
+	uint32_t box_index; /**< The box index (place in Basket) in original Basket */
+	box_type_t box_size; /**< The size of the box, not include ::box_size and ::box_checksum fields */
 }
 box_dump_t;
 
-typedef struct __attribute__((packed)) {
-	uint32_t watermark; /**< Watermark: filled with a predefined pattern WATERMARK_BASKET */
-	uint32_t checksum; /**< The checksum of box buffer, means ::box_dump field; This field is optional, and ignored if == 0 */
-	uint64_t ticket; /**< The same as ticket in ::basket_t, for free use */
-	uint32_t total_len; /**< Total length of this buffer, including all fields */
-	uint32_t boxes_used; /**< Number of Boxed used in original basket */
-	uint32_t boxes_dumped; /**< Number of Boxed dumped from the original basked */
-	uint32_t ztable_buf_size; /**< Size (in bytes) of ztable buffer. If '0' meant no ztable */
+typedef struct __attribute__((packed)){
+	watermark_t watermark; /**< Watermark: filled with a predefined pattern WATERMARK_BASKET */
+	uint32_t 	checksum; /**< The checksum of box buffer, means ::box_dump field; This field is optional, and ignored if == 0 */
+	ticket_t 	ticket; /**< The same as ticket in ::basket_t, for free use */
+	uint32_t 	total_len; /**< Total length of this buffer, including all fields */
+	num_boxes_t boxes_used; /**< Number of Boxed used in original basket */
+	num_boxes_t boxes_dumped; /**< Number of Boxed dumped from the original basked */
+	uint32_t 	ztable_buf_size; /**< Size (in bytes) of ztable buffer. If '0' meant no ztable */
 }
 basket_send_header_t;
 
