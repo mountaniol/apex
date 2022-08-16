@@ -23,24 +23,28 @@ static const size_t hash_sizes[] = {
 
 /*** STATIC FUNCTIONS ***/
 
-FATTR_WARN_UNUSED_RET FATTR_HOT static void *zmalloc(const size_t sz)
+__attribute__((warn_unused_result, hot))
+static void *zmalloc(const size_t sz)
 {
 	return calloc(1, sz);
 }
 
-FATTR_WARN_UNUSED_RET FATTR_CONST static size_t next_size_index(const size_t size_index)
+__attribute__((warn_unused_result, const))
+static size_t next_size_index(const size_t size_index)
 {
 	if (size_index == COUNT_OF(hash_sizes)) return (size_index);
 	return (size_index + 1);
 }
 
-FATTR_WARN_UNUSED_RET FATTR_CONST static size_t previous_size_index(const size_t size_index)
+__attribute__((warn_unused_result, const))
+static size_t previous_size_index(const size_t size_index)
 {
 	if (size_index == 0) return (size_index);
 	return (size_index - 1);
 }
 
-FATTR_WARN_UNUSED_RET FATTR_HOT static void *zcalloc(const size_t num, const size_t size)
+__attribute__((warn_unused_result, hot))
+static void *zcalloc(const size_t num, const size_t size)
 {
 	void *ptr = calloc(num, size);
 	if (!ptr) exit(EXIT_FAILURE);
@@ -55,7 +59,8 @@ FATTR_WARN_UNUSED_RET FATTR_HOT static void *zcalloc(const size_t num, const siz
  * @return ztable_t* 
  * @details 
  */
-FATTR_WARN_UNUSED_RET static ztable_t *zcreate_hash_table_with_size(const size_t size_index)
+__attribute__((warn_unused_result))
+static ztable_t *zcreate_hash_table_with_size(const size_t size_index)
 {
 	ztable_t *hash_table = zmalloc(sizeof(ztable_t));
 	TESTP(hash_table, NULL);
@@ -81,7 +86,7 @@ FATTR_WARN_UNUSED_RET static ztable_t *zcreate_hash_table_with_size(const size_t
  * @details BE AWARE: This is an internal function. No values
  *  		validation.
  */
-FATTR_WARN_UNUSED_RET FATTR_CONST FATTR_HOT FATTR_NONULL(1)
+__attribute__((warn_unused_result, pure, nonnull(1)))
 static size_t zhash_entry_index_by_int(const ztable_t *hash_table, const uint64_t key_int64)
 {
 	const size_t size = hash_sizes[hash_table->size_index];
@@ -96,7 +101,7 @@ static size_t zhash_entry_index_by_int(const ztable_t *hash_table, const uint64_
  * @details BE AWARE: This is an internal function. No values
  *  		validation.
  */
-FATTR_NONULL(1)
+__attribute__((nonnull(1)))
 static void zhash_rehash(ztable_t *hash_table, const size_t size_index)
 {
 	size_t   hash;
@@ -136,7 +141,7 @@ static void zhash_rehash(ztable_t *hash_table, const size_t size_index)
  * @details BE AWARE: This is an internal function. No values
  *  		validation. 
  */
-FATTR_COLD FATTR_NONULL(1, 2)
+__attribute__((nonnull(1, 2), cold))
 #ifdef DEBUG3
 void zhash_dump(const ztable_t *hash_table, const char *name)
 #else
@@ -185,11 +190,12 @@ void zhash_dump(const ztable_t *hash_table, __attribute__((unused))const char *n
  * @details BE AWARE: This is an internal function. No values
  *  		validation.
  */
-FATTR_HOT static void zentry_t_fill(zentry_t *entry, uint64_t key_int64,
-									void *val,
-									const size_t val_size,
-									char *key_str,
-									const size_t key_str_len)
+__attribute__((hot))
+static void zentry_t_fill(zentry_t *entry, uint64_t key_int64,
+						  void *val,
+						  const size_t val_size,
+						  char *key_str,
+						  const size_t key_str_len)
 {
 	entry->Key.key_int64 = key_int64;
 	entry->Key.key_str = key_str;
@@ -199,7 +205,8 @@ FATTR_HOT static void zentry_t_fill(zentry_t *entry, uint64_t key_int64,
 	entry->next = NULL;
 }
 
-FATTR_WARN_UNUSED_RET FATTR_HOT static zentry_t *zentry_t_alloc(uint64_t key_int64, void *val, size_t val_size, char *key_str, size_t key_str_len)
+__attribute__((warn_unused_result, hot))
+static zentry_t *zentry_t_alloc(uint64_t key_int64, void *val, size_t val_size, char *key_str, size_t key_str_len)
 {
 	zentry_t *entry = zmalloc(sizeof(zentry_t));
 	TESTP(entry, NULL);
@@ -208,7 +215,7 @@ FATTR_WARN_UNUSED_RET FATTR_HOT static zentry_t *zentry_t_alloc(uint64_t key_int
 	return (entry);
 }
 
-FATTR_NONULL(1)
+__attribute__((nonnull(1)))
 static void zentry_t_release(zentry_t *entry, const bool recursive, const int8_t force_values_clean)
 {
 	if (recursive && entry->next) {
@@ -246,7 +253,7 @@ static void zentry_t_release(zentry_t *entry, const bool recursive, const int8_t
  * @details BE AWARE: Collisions are possible. Since 64 bits valus is used, the collision
  *          probability is low but possible. Always test the return value for collision situation.
  */
-FATTR_WARN_UNUSED_RET FATTR_HOT FATTR_NONULL(1)
+__attribute__((warn_unused_result, nonnull(1), hot))
 static int8_t zhash_insert(ztable_t *hash_table,
 						   uint64_t key_int64,
 						   char *key_str,
@@ -297,7 +304,7 @@ static int8_t zhash_insert(ztable_t *hash_table,
  *  	   failure.
  * @details 
  */
-FATTR_WARN_UNUSED_RET FATTR_CONST FATTR_NONULL(1)
+__attribute__((warn_unused_result, pure, nonnull(1)))
 static zentry_t *zhash_find_entry_by_int(const ztable_t *hash_table, const uint64_t key_int64)
 {
 	zentry_t     *entry;
@@ -331,7 +338,7 @@ static zentry_t *zhash_find_entry_by_int(const ztable_t *hash_table, const uint6
  * @return void* Pointer to the entry, NULL on error
  * @details 
  */
-FATTR_WARN_UNUSED_RET FATTR_CONST FATTR_NONULL(1)
+__attribute__((warn_unused_result, pure, nonnull(1)))
 static void *zhash_entry_find_by_str(const ztable_t *hash_table, char *key_str, const size_t key_str_len)
 {
 	uint64_t key_int64 = zhash_key_int64_from_key_str(key_str, key_str_len);
@@ -342,7 +349,8 @@ static void *zhash_entry_find_by_str(const ztable_t *hash_table, char *key_str, 
 
 /*** END OF STATIC FUNCTIONS ***/
 
-FATTR_WARN_UNUSED_RET ztable_t *zhash_allocate(void)
+__attribute__((warn_unused_result))
+ztable_t *zhash_allocate(void)
 {
 	return (zcreate_hash_table_with_size(0));
 }
@@ -367,7 +375,8 @@ void zhash_release(ztable_t *hash_table, const int8_t force_values_clean)
 	zfree(hash_table);
 }
 
-FATTR_WARN_UNUSED_RET FATTR_CONST FATTR_HOT uint64_t zhash_key_int64_from_key_str(const char *key_str, const size_t key_str_len)
+__attribute__((warn_unused_result, pure, hot))
+uint64_t zhash_key_int64_from_key_str(const char *key_str, const size_t key_str_len)
 {
 	uint64_t key_int64 = 0;
 	if (0 == key_str_len) {
@@ -382,16 +391,18 @@ FATTR_WARN_UNUSED_RET FATTR_CONST FATTR_HOT uint64_t zhash_key_int64_from_key_st
 	return key_int64;
 }
 
-FATTR_WARN_UNUSED_RET FATTR_HOT int8_t zhash_insert_by_int(ztable_t *hash_table, uint64_t int_key, void *val, size_t val_size)
+__attribute__((warn_unused_result, hot))
+int8_t zhash_insert_by_int(ztable_t *hash_table, uint64_t int_key, void *val, size_t val_size)
 {
 	return zhash_insert(hash_table, int_key, NULL, 0, val, val_size);
 }
 
-FATTR_WARN_UNUSED_RET FATTR_HOT int8_t zhash_insert_by_str(ztable_t *hash_table,
-														   char *key_str,
-														   const size_t key_str_len,
-														   void *val,
-														   const size_t val_size)
+__attribute__((warn_unused_result, hot))
+int8_t zhash_insert_by_str(ztable_t *hash_table,
+						   char *key_str,
+						   const size_t key_str_len,
+						   void *val,
+						   const size_t val_size)
 {
 	char     *key_str_copy;
 	uint64_t key_int64     = zhash_key_int64_from_key_str(key_str, key_str_len);
@@ -405,7 +416,8 @@ FATTR_WARN_UNUSED_RET FATTR_HOT int8_t zhash_insert_by_str(ztable_t *hash_table,
 	return zhash_insert(hash_table, key_int64, key_str_copy, key_str_len, val, val_size);
 }
 
-FATTR_WARN_UNUSED_RET FATTR_HOT void *zhash_find_by_int(const ztable_t *hash_table, uint64_t key_int64, ssize_t *val_size)
+__attribute__((warn_unused_result, hot))
+void *zhash_find_by_int(const ztable_t *hash_table, uint64_t key_int64, ssize_t *val_size)
 {
 	zentry_t     *entry;
 	const size_t hash   = zhash_entry_index_by_int(hash_table, key_int64);
@@ -423,7 +435,8 @@ FATTR_WARN_UNUSED_RET FATTR_HOT void *zhash_find_by_int(const ztable_t *hash_tab
 }
 
 /* TODO: Convert string to int64 key and search by int64 key */
-FATTR_WARN_UNUSED_RET FATTR_HOT void *zhash_find_by_str(const ztable_t *hash_table, char *key_str, const size_t key_str_len, ssize_t *val_size)
+__attribute__((warn_unused_result, hot))
+void *zhash_find_by_str(const ztable_t *hash_table, char *key_str, const size_t key_str_len, ssize_t *val_size)
 {
 	uint64_t key_int64 = zhash_key_int64_from_key_str(key_str, key_str_len);
 	DDD("Calculated key_int: %lX\n", key_int64);
@@ -431,7 +444,8 @@ FATTR_WARN_UNUSED_RET FATTR_HOT void *zhash_find_by_str(const ztable_t *hash_tab
 
 }
 
-FATTR_WARN_UNUSED_RET FATTR_HOT void *zhash_extract_by_int(ztable_t *hash_table, const uint64_t key_int64, ssize_t *out_size)
+__attribute__((warn_unused_result, hot))
+void *zhash_extract_by_int(ztable_t *hash_table, const uint64_t key_int64, ssize_t *out_size)
 {
 	size_t       size;
 	zentry_t     *entry;
@@ -471,13 +485,15 @@ FATTR_WARN_UNUSED_RET FATTR_HOT void *zhash_extract_by_int(ztable_t *hash_table,
 	return (val);
 }
 
-FATTR_WARN_UNUSED_RET FATTR_HOT void *zhash_extract_by_str(ztable_t *hash_table, const char *key_str, const size_t key_str_len, ssize_t *size)
+__attribute__((warn_unused_result, hot))
+void *zhash_extract_by_str(ztable_t *hash_table, const char *key_str, const size_t key_str_len, ssize_t *size)
 {
 	const uint64_t key_int64 = zhash_key_int64_from_key_str(key_str, key_str_len);
 	return zhash_extract_by_int(hash_table, key_int64, size);
 }
 
-FATTR_WARN_UNUSED_RET FATTR_CONST FATTR_HOT bool zhash_exists_by_int(const ztable_t *hash_table, const uint64_t key_int64)
+__attribute__((warn_unused_result, pure, hot))
+bool zhash_exists_by_int(const ztable_t *hash_table, const uint64_t key_int64)
 {
 	zentry_t     *entry;
 	const size_t hash   = zhash_entry_index_by_int(hash_table, key_int64);
@@ -491,14 +507,16 @@ FATTR_WARN_UNUSED_RET FATTR_CONST FATTR_HOT bool zhash_exists_by_int(const ztabl
 	return false;
 }
 
-FATTR_WARN_UNUSED_RET FATTR_CONST FATTR_HOT bool zhash_exists_by_str(ztable_t *hash_table, const char *key_str, size_t key_str_len)
+__attribute__((warn_unused_result, pure, hot))
+bool zhash_exists_by_str(ztable_t *hash_table, const char *key_str, size_t key_str_len)
 {
 	const uint64_t key_int64 = zhash_key_int64_from_key_str(key_str, strnlen(key_str, key_str_len));
 	return zhash_exists_by_int(hash_table, key_int64);
 }
 
 /*** Iterate all items in hash ***/
-FATTR_WARN_UNUSED_RET FATTR_COLD zentry_t *zhash_list(const ztable_t *hash_table, size_t *index, const zentry_t *entry)
+__attribute__((warn_unused_result, cold))
+zentry_t *zhash_list(const ztable_t *hash_table, size_t *index, const zentry_t *entry)
 {
 	size_t   size;
 	TESTP(hash_table, NULL);
@@ -529,7 +547,8 @@ FATTR_WARN_UNUSED_RET FATTR_COLD zentry_t *zhash_list(const ztable_t *hash_table
 }
 
 /*** ADDITION: ZHASH TO BUF / BUF TO ZHASH ***/
-FATTR_WARN_UNUSED_RET FATTR_CONST FATTR_NONULL(1) size_t zhash_to_buf_allocation_size(const ztable_t *hash_table)
+__attribute__((warn_unused_result, pure, nonnull(1)))
+size_t zhash_to_buf_allocation_size(const ztable_t *hash_table)
 {
 	/* We need one header for the whole buffer */
 	size_t       size           = sizeof(zhash_header_t);
@@ -553,7 +572,8 @@ FATTR_WARN_UNUSED_RET FATTR_CONST FATTR_NONULL(1) size_t zhash_to_buf_allocation
 	return size;
 }
 
-FATTR_WARN_UNUSED_RET void *zhash_to_buf(const ztable_t *hash_table, size_t *size)
+__attribute__((warn_unused_result))
+void *zhash_to_buf(const ztable_t *hash_table, size_t *size)
 {
 	size_t         index;
 	size_t         num_of_entryes;
@@ -622,6 +642,7 @@ FATTR_WARN_UNUSED_RET void *zhash_to_buf(const ztable_t *hash_table, size_t *siz
 	return buf;
 }
 
+__attribute__((warn_unused_result, pure))
 static int8_t zhash_is_valid(const char *buf, const size_t size)
 {
 	const zhash_header_t *zhead = (zhash_header_t *)buf;
@@ -639,7 +660,8 @@ static int8_t zhash_is_valid(const char *buf, const size_t size)
 	return 0;
 }
 
-FATTR_WARN_UNUSED_RET ztable_t *zhash_from_buf(const char *buf, const size_t size)
+__attribute__((warn_unused_result))
+ztable_t *zhash_from_buf(const char *buf, const size_t size)
 {
 	size_t               index;
 	size_t               offset = 0;
@@ -657,7 +679,7 @@ FATTR_WARN_UNUSED_RET ztable_t *zhash_from_buf(const char *buf, const size_t siz
 	offset += sizeof(zhash_header_t);
 
 	for (index = 0; index < zhead->entry_count; index++) {
-		int8_t               rc;
+		int8_t              rc;
 		char                *key_str = NULL;
 		void                *val;
 		const zhash_entry_t *zent    = (zhash_entry_t  *)(buf + offset);
@@ -682,7 +704,7 @@ FATTR_WARN_UNUSED_RET ztable_t *zhash_from_buf(const char *buf, const size_t siz
 		offset += zent->val_size;
 
 		DDD("Inserting: zt = %p, zent->key_int64 = %lX, key_str = |%s|, zent->key_str_len = %u, val = %p, zent->val_size = %u\n",
-			zt, zent->key_int64, 
+			zt, zent->key_int64,
 			(NULL != key_str) ? key_str : "NULL",
 			zent->key_str_len, val, zent->val_size);
 
@@ -711,7 +733,8 @@ FATTR_WARN_UNUSED_RET ztable_t *zhash_from_buf(const char *buf, const size_t siz
 }
 
 /* Compare two zhash buffers */
-FATTR_WARN_UNUSED_RET FATTR_COLD int8_t zhash_cmp_zhash(const ztable_t *left, const ztable_t *right)
+__attribute__((warn_unused_result, cold))
+int8_t zhash_cmp_zhash(const ztable_t *left, const ztable_t *right)
 {
 
 	uint32_t index;

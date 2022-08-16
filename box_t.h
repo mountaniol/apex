@@ -346,6 +346,13 @@ extern void bx_used_inc(box_t *buf, const box_s64_t used);
  */
 extern void bx_used_dec(box_t *buf, const box_s64_t dec);
 
+extern void bx_members_set(box_t *box, const box_s64_t members);
+void bx_members_inc(box_t *box, const box_s64_t inc);
+void bx_members_dec(box_t *box, const box_s64_t dec);
+size_t bx_member_size(box_t *box);
+void *bx_member_ptr(box_t *box, size_t member);
+ret_t bx_member_copy(box_t *box, size_t member, void *buf, size_t buf_size);
+
 /**
  * @author Sebastian Mountaniol (14/06/2020)
  * @brief Return size of memory currently allocated for this 'buf' (which is buf->room)

@@ -97,7 +97,8 @@ int bx_if_size_fits_box_type(ssize_t size)
 
 /*** box->used field ***/
 
-FATTR_WARN_UNUSED_RET FATTR_CONST box_s64_t bx_used_take(const box_t *box)
+__attribute__((warn_unused_result, pure))
+box_s64_t bx_used_take(const box_t *box)
 {
 	TESTP_ABORT(box);
 	return (box->used);
@@ -154,7 +155,8 @@ void bx_used_dec(box_t *box, const box_s64_t dec)
 
 /*** box->members field ***/
 
-FATTR_WARN_UNUSED_RET FATTR_CONST box_s64_t bx_members_take(const box_t *box)
+__attribute__((warn_unused_result, pure))
+box_s64_t bx_members_take(const box_t *box)
 {
 	TESTP_ABORT(box);
 	return (box->members);
@@ -207,11 +209,71 @@ void bx_members_dec(box_t *box, const box_s64_t dec)
 	}
 }
 
+size_t bx_member_size(box_t *box)
+{
+	TESTP_ABORT(box);
+	if (0 == bx_members_take(box)) {
+		return 0;
+	}
+
+	return (size_t)bx_used_take(box) / (size_t)bx_members_take(box);
+}
+
+void *bx_member_ptr(box_t *box, size_t member)
+{
+	TESTP_ABORT(box);
+	size_t num_members = bx_members_take(box);
+	char   *data;
+
+	if (0 == num_members) {
+		DDE("There are 0 members in the box; looks like the box is empty\n");
+		return NULL;
+	}
+
+	if (member > num_members) {
+		DDE("Asked member (%zu) > number of members (%zu) in the box\n",
+			member, num_members);
+		return NULL;
+	}
+
+
+	data = bx_data_take(box);
+	return (data + member);
+}
+
+ret_t bx_member_copy(box_t *box, size_t member, void *buf, size_t buf_size)
+{
+	TESTP_ABORT(box);
+	void   *mem_ptr    = bx_member_ptr(box, member);
+	size_t member_size;
+
+	if (NULL == mem_ptr) {
+		DE("Could not get member ptr\n");
+		return -1;
+	}
+
+	member_size = bx_member_size(box);
+	if (0 == member_size) {
+		DE("Could not get member size");
+		return -1;
+	}
+
+	if (buf_size < member_size) {
+		DE("Can not copy: member size (%zu) > user's buffer size (%zu)\n",
+		   member_size, buf_size);
+	}
+
+	memcpy(buf, mem_ptr, member_size);
+	return 0;
+}
+
+
 /*** End of box->members field ***/
 
 /*** box->room field ***/
 
-FATTR_WARN_UNUSED_RET FATTR_CONST box_s64_t bx_room_take(const box_t *box)
+__attribute__((warn_unused_result, pure))
+box_s64_t bx_room_take(const box_t *box)
 {
 	TESTP_ABORT(box);
 	return (box->room);
@@ -269,7 +331,8 @@ void bx_room_dec(box_t *box, const box_s64_t dec)
 /*** End of box->room field ***/
 
 /* Validate sanity of box_t - common for all boxes */
-FATTR_WARN_UNUSED_RET FATTR_CONST ret_t bx_is_valid(const box_t *box, const char *who, const int line)
+__attribute__((warn_unused_result, pure))
+ret_t bx_is_valid(const box_t *box, const char *who, const int line)
 {
 	TESTP_ABORT(box);
 
@@ -325,7 +388,8 @@ FATTR_WARN_UNUSED_RET FATTR_CONST ret_t bx_is_valid(const box_t *box, const char
 	return (A_OK);
 }
 
-FATTR_WARN_UNUSED_RET box_t *bx_new(const box_s64_t size)
+__attribute__((warn_unused_result))
+box_t *bx_new(const box_s64_t size)
 {
 	box_t  *box;
 
@@ -370,7 +434,8 @@ FATTR_WARN_UNUSED_RET box_t *bx_new(const box_s64_t size)
 	return (box);
 }
 
-FATTR_WARN_UNUSED_RET FATTR_CONST ret_t bx_data_set(box_t *box, char *data, const box_s64_t size, const box_s64_t len)
+__attribute__((warn_unused_result))
+ret_t bx_data_set(box_t *box, char *data, const box_s64_t size, const box_s64_t len)
 {
 	TESTP_ABORT(box);
 	TESTP_ABORT(data);
@@ -402,7 +467,8 @@ FATTR_WARN_UNUSED_RET FATTR_CONST ret_t bx_data_set(box_t *box, char *data, cons
 	return (A_OK);
 }
 
-FATTR_WARN_UNUSED_RET void *bx_data_steal(box_t *box)
+__attribute__((warn_unused_result))
+void *bx_data_steal(box_t *box)
 {
 	/* Keep temporarly pointer of intennal data buffer */
 	void *data;
@@ -415,13 +481,15 @@ FATTR_WARN_UNUSED_RET void *bx_data_steal(box_t *box)
 	return (data);
 }
 
-FATTR_WARN_UNUSED_RET FATTR_CONST void *bx_data_take(const box_t *box)
+__attribute__((warn_unused_result, pure))
+void *bx_data_take(const box_t *box)
 {
 	TESTP_ABORT(box);
 	return (box->data);
 }
 
-FATTR_WARN_UNUSED_RET FATTR_CONST ret_t bx_is_data_null(const box_t *box)
+__attribute__((warn_unused_result, pure))
+ret_t bx_is_data_null(const box_t *box)
 {
 	TESTP_ABORT(box);
 	if (NULL == box->data) {
@@ -431,7 +499,8 @@ FATTR_WARN_UNUSED_RET FATTR_CONST ret_t bx_is_data_null(const box_t *box)
 }
 
 /* This is an internal function. Here we realloc the internal box_t buffer */
-FATTR_WARN_UNUSED_RET static ret_t bx_realloc(box_t *box, const size_t new_size)
+__attribute__((warn_unused_result))
+static ret_t bx_realloc(box_t *box, const size_t new_size)
 {
 	size_t size_to_copy = 0;
 	void   *tmp         = NULL;
@@ -487,7 +556,8 @@ static ret_t box_realloc_old(box_t *box, size_t new_size){
 }
 #endif
 
-FATTR_WARN_UNUSED_RET ret_t bx_room_add_memory(box_t *box, const box_s64_t sz)
+__attribute__((warn_unused_result))
+ret_t bx_room_add_memory(box_t *box, const box_s64_t sz)
 {
 	size_t original_room_size;
 	TESTP_ABORT(box);
@@ -530,7 +600,8 @@ FATTR_WARN_UNUSED_RET ret_t bx_room_add_memory(box_t *box, const box_s64_t sz)
 }
 
 /* Return how much bytes is available in the box_t */
-FATTR_WARN_UNUSED_RET FATTR_CONST box_s64_t bx_room_avaialable_take(const box_t *box)
+__attribute__((warn_unused_result, pure))
+box_s64_t bx_room_avaialable_take(const box_t *box)
 {
 	box_s64_t m_used = -1;
 	box_s64_t m_room = -1;
@@ -551,7 +622,8 @@ FATTR_WARN_UNUSED_RET FATTR_CONST box_s64_t bx_room_avaialable_take(const box_t 
 	return m_room - m_used;
 }
 
-FATTR_WARN_UNUSED_RET ret_t bx_room_assure(box_t *box, const box_s64_t expect)
+__attribute__((warn_unused_result))
+ret_t bx_room_assure(box_t *box, const box_s64_t expect)
 {
 	TESTP_ABORT(box);
 
@@ -575,7 +647,8 @@ FATTR_WARN_UNUSED_RET ret_t bx_room_assure(box_t *box, const box_s64_t expect)
 	return (bx_room_add_memory(box, expect));
 }
 
-FATTR_WARN_UNUSED_RET ret_t bx_clean_and_reset(box_t *box)
+__attribute__((warn_unused_result))
+ret_t bx_clean_and_reset(box_t *box)
 {
 	TESTP_ABORT(box);
 
@@ -595,7 +668,8 @@ FATTR_WARN_UNUSED_RET ret_t bx_clean_and_reset(box_t *box)
 	return (A_OK);
 }
 
-FATTR_WARN_UNUSED_RET ret_t bx_free(box_t *box)
+__attribute__((warn_unused_result))
+ret_t bx_free(box_t *box)
 {
 	TESTP_ABORT(box);
 
@@ -615,9 +689,10 @@ FATTR_WARN_UNUSED_RET ret_t bx_free(box_t *box)
 }
 
 /* Copy the given buffer "new_data" at tail of the buf_t */
-FATTR_WARN_UNUSED_RET ret_t bx_add(box_t *box /* box_t to add into */,
-								   const char *new_data /* Buffer to add */,
-								   const box_s64_t sz /* Size of the buffer to add */)
+__attribute__((warn_unused_result))
+ret_t bx_add(box_t *box /* box_t to add into */,
+			 const char *new_data /* Buffer to add */,
+			 const box_s64_t sz /* Size of the buffer to add */)
 {
 	TESTP_ABORT(box);
 	TESTP_ABORT(new_data);
@@ -657,7 +732,8 @@ FATTR_WARN_UNUSED_RET ret_t bx_add(box_t *box /* box_t to add into */,
 	return (A_OK);
 }
 
-FATTR_WARN_UNUSED_RET ret_t bx_merge(box_t *dst, box_t *src)
+__attribute__((warn_unused_result))
+ret_t bx_merge(box_t *dst, box_t *src)
 {
 	/* rc keeps the return value from box_add() */
 	ret_t rc;
@@ -678,9 +754,10 @@ FATTR_WARN_UNUSED_RET ret_t bx_merge(box_t *dst, box_t *src)
 }
 
 /* Replace the internal box buffer with the buffer "new_data" */
-FATTR_WARN_UNUSED_RET ret_t bx_replace_data(box_t *box /* box_t to replace data in */,
-											const char *new_data /* Buffer to copy into the box_t */,
-											const box_s64_t size /* Size of the new buffer to set */)
+__attribute__((warn_unused_result))
+ret_t bx_replace_data(box_t *box /* box_t to replace data in */,
+					  const char *new_data /* Buffer to copy into the box_t */,
+					  const box_s64_t size /* Size of the new buffer to set */)
 {
 	box_s64_t current_room_size;
 

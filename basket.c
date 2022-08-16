@@ -33,7 +33,8 @@ static void basket_free_mem(void *mem,
 	free(mem);
 }
 
-FATTR_COLD FATTR_UNUSED static void basket_dump(void *basket, const char *msg)
+__attribute__((unused,cold))
+static void basket_dump(void *basket, const char *msg)
 {
 	const basket_t *_basket = basket;
 	TESTP_ABORT(_basket);
@@ -64,7 +65,8 @@ FATTR_COLD FATTR_UNUSED static void basket_dump(void *basket, const char *msg)
 	DD("^^^^^^^^^^^^^^^^^^^^^^^^^\n");
 }
 
-FATTR_WARN_UNUSED_RET void *basket_new(void)
+__attribute__((warn_unused_result))
+void *basket_new(void)
 {
 	/* basket: pointer to the allocated memory */
 	basket_t *basket = malloc(sizeof(basket_t));
@@ -74,7 +76,8 @@ FATTR_WARN_UNUSED_RET void *basket_new(void)
 	return (basket);
 }
 
-FATTR_WARN_UNUSED_RET ret_t basket_release(void *basket)
+__attribute__((warn_unused_result))
+ret_t basket_release(void *basket)
 {
 	basket_t *_basket = basket;
 	TESTP_ABORT(_basket);
@@ -107,7 +110,8 @@ FATTR_WARN_UNUSED_RET ret_t basket_release(void *basket)
 /*** Getters / Setters */
 
 /* Internal function: get pointer of a box inside of the basket */
-FATTR_HOT void *basket_get_box(const void *basket, const box_u32_t box_index)
+__attribute__((hot))
+void *basket_get_box(const void *basket, const box_u32_t box_index)
 {
 	const basket_t *_basket = basket;
 	TESTP_ABORT(_basket);
@@ -131,7 +135,8 @@ FATTR_HOT void *basket_get_box(const void *basket, const box_u32_t box_index)
  * @details NULL pointer is not an error. This function will
  *  		crash on error. Error conditions: 
  */
-FATTR_WARN_UNUSED_RET static void *basket_get_last_box(const void *basket)
+__attribute__((warn_unused_result))
+static void *basket_get_last_box(const void *basket)
 {
 	const basket_t *_basket = basket;;
 	TESTP_ABORT(_basket);
@@ -144,14 +149,16 @@ FATTR_WARN_UNUSED_RET static void *basket_get_last_box(const void *basket)
 	return _basket->boxes[_basket->boxes_used - 1];
 }
 
-FATTR_WARN_UNUSED_RET static box_s64_t basket_get_last_box_index(const void *basket)
+__attribute__((warn_unused_result))
+static box_s64_t basket_get_last_box_index(const void *basket)
 {
 	const basket_t *_basket = basket;
 	TESTP_ABORT(_basket);
 	return _basket->boxes_used - 1;
 }
 
-FATTR_WARN_UNUSED_RET size_t basket_memory_size(const void *basket)
+__attribute__((warn_unused_result))
+size_t basket_memory_size(const void *basket)
 {
 	const basket_t *_basket  = basket;
 	/* Index variable to iterate boxes */
@@ -183,7 +190,8 @@ FATTR_WARN_UNUSED_RET size_t basket_memory_size(const void *basket)
 	return size;
 }
 
-FATTR_WARN_UNUSED_RET size_t basket_data_size(const void *basket)
+__attribute__((warn_unused_result))
+size_t basket_data_size(const void *basket)
 {
 	const basket_t *_basket  = basket;
 	/* Index variable to iterate boxes */
@@ -208,7 +216,8 @@ FATTR_WARN_UNUSED_RET size_t basket_data_size(const void *basket)
 }
 
 /* Clean all boxes */
-FATTR_WARN_UNUSED_RET ret_t basket_clean(void *basket)
+__attribute__((warn_unused_result))
+ret_t basket_clean(void *basket)
 {
 	basket_t *_basket  = basket;
 	uint32_t box_index;
@@ -256,7 +265,8 @@ FATTR_WARN_UNUSED_RET ret_t basket_clean(void *basket)
 	return 0;
 }
 
-FATTR_WARN_UNUSED_RET static ret_t basket_grow_box_pointers(void *basket)
+__attribute__((warn_unused_result))
+static ret_t basket_grow_box_pointers(void *basket)
 {
 	basket_t *_basket             = basket;
 	void     *reallocated_mem     = NULL;
@@ -302,7 +312,8 @@ FATTR_WARN_UNUSED_RET static ret_t basket_grow_box_pointers(void *basket)
 }
 
 /* TODO: Not tested yet */
-FATTR_WARN_UNUSED_RET ret_t box_insert_after(void *basket, const uint32_t after_index, const void *buffer, const box_u32_t buffer_size)
+__attribute__((warn_unused_result))
+ret_t box_insert_after(void *basket, const uint32_t after_index, const void *buffer, const box_u32_t buffer_size)
 {
 	basket_t  *_basket                = basket;
 	box_t     *box;
@@ -356,7 +367,8 @@ FATTR_WARN_UNUSED_RET ret_t box_insert_after(void *basket, const uint32_t after_
 }
 
 /* TODO: Not tested */
-FATTR_WARN_UNUSED_RET ret_t box_swap(void *basket, const box_u32_t first_index, const box_u32_t second_index)
+__attribute__((warn_unused_result))
+ret_t box_swap(void *basket, const box_u32_t first_index, const box_u32_t second_index)
 {
 	basket_t *_basket = basket;
 	box_t    *tmp;
@@ -374,7 +386,8 @@ FATTR_WARN_UNUSED_RET ret_t box_swap(void *basket, const box_u32_t first_index, 
 	return 0;
 }
 
-FATTR_WARN_UNUSED_RET ret_t box_clean(void *basket, const box_u32_t box_index)
+__attribute__((warn_unused_result))
+ret_t box_clean(void *basket, const box_u32_t box_index)
 {
 	basket_t *_basket = basket;
 	box_t    *box;
@@ -398,7 +411,8 @@ FATTR_WARN_UNUSED_RET ret_t box_clean(void *basket, const box_u32_t box_index)
 	return 0;
 }
 
-FATTR_WARN_UNUSED_RET ret_t box_merge_box(void *basket, const box_u32_t src, const box_u32_t dst)
+__attribute__((warn_unused_result))
+ret_t box_merge_box(void *basket, const box_u32_t src, const box_u32_t dst)
 {
 	basket_t *_basket = basket;
 	box_t    *box_src;
@@ -448,7 +462,8 @@ FATTR_WARN_UNUSED_RET ret_t box_bisect(__attribute__((unused))void *basket,
 }
 #endif
 
-FATTR_WARN_UNUSED_RET ret_t basket_collapse(void *basket)
+__attribute__((warn_unused_result))
+ret_t basket_collapse(void *basket)
 {
 	basket_t  *_basket  = basket;
 	box_u32_t box_index;
@@ -482,6 +497,7 @@ FATTR_WARN_UNUSED_RET ret_t basket_collapse(void *basket)
 	return 0;
 }
 
+__attribute__((warn_unused_result))
 size_t basket_flat_buf_size(const basket_t *basket)
 {
 	box_u32_t box_index;
@@ -522,7 +538,7 @@ static void basket_fill_send_header_from_basket_t(basket_send_header_t *basket_b
 {
 	box_u32_t box_index;
 	box_u32_t boxes_to_dump = 0;
-	size_t    buf_size  = sizeof(basket_send_header_t);
+	size_t    buf_size      = sizeof(basket_send_header_t);
 
 	/* And we need the struct box_dump_t per box */
 	// buf_size += sizeof(box_dump_t) * basket->boxes_used;
@@ -574,18 +590,19 @@ static void basket_checksum_set(basket_send_header_t *basket_buf_header_p)
 	DDD("Checksum set: %X\n", basket_buf_header_p->checksum);
 }
 
-int8_t basket_checksum_test(const basket_send_header_t *basket_buf_header_p)
+__attribute__((warn_unused_result))
+static int8_t basket_checksum_test(const basket_send_header_t *basket_buf_header_p)
 {
-	int8_t   rc                = -1;
-	checksum_t calculated_sum    = 0XDEADBEEF;
+	int8_t     rc                = -1;
+	checksum_t calculated_sum    = 0;
 
 	/* We start the checksum from 'ticket',
 		we do not consider watermark and the checksum fields */
-	size_t   start_offset      = 0;
+	size_t     start_offset      = 0;
 	/* Size to count - the size of this buffer less two filelds, 'watermark' and 'checksum' */
-	size_t   size_to_count     = 0;
+	size_t     size_to_count     = 0;
 	/* Start from 'ticket' field */
-	char     *address_to_start = NULL;
+	char       *address_to_start = NULL;
 
 	TESTP(basket_buf_header_p, -1);
 
@@ -598,7 +615,8 @@ int8_t basket_checksum_test(const basket_send_header_t *basket_buf_header_p)
 	size_to_count     = basket_buf_header_p->total_len - start_offset;
 	address_to_start = (char *)basket_buf_header_p + start_offset;
 
-	rc = checksum_buf_to_32_bit(address_to_start, size_to_count, &calculated_sum);
+	//rc = checksum_buf_to_32_bit(address_to_start, size_to_count, &calculated_sum);
+	rc = checksum_buf_configured(address_to_start, size_to_count, &calculated_sum);
 
 	if (0 != rc) {
 		DE("Failed to calculate the final buffer checksum");
@@ -624,7 +642,8 @@ int8_t basket_checksum_test(const basket_send_header_t *basket_buf_header_p)
  *  		points to a buffer big enoght for the box_dump_t
  *  		structure and all dumped data from the box. 
  */
-FATTR_WARN_UNUSED_RET static size_t basket_fill_send_box_from_box_t(box_dump_t *box_dump_header_p, const box_t *box, uint32_t box_index)
+__attribute__((warn_unused_result))
+static size_t basket_fill_send_box_from_box_t(box_dump_t *box_dump_header_p, const box_t *box, uint32_t box_index)
 {
 	char      *buf       = (char *)box_dump_header_p;
 	char      *box_data;
@@ -657,11 +676,12 @@ FATTR_WARN_UNUSED_RET static size_t basket_fill_send_box_from_box_t(box_dump_t *
 }
 
 /* This function creates a flat buffer ready for sending/saving */
-FATTR_WARN_UNUSED_RET void *basket_to_buf(const void *basket, size_t *size)
+__attribute__((warn_unused_result))
+void *basket_to_buf(const void *basket, size_t *size)
 {
 	const basket_t       *_basket             = basket;
 	box_u32_t            box_index;
-	uint32_t             boxes_dumped = 0;
+	uint32_t             boxes_dumped         = 0;
 	char                 *buf;
 	size_t               buf_size             = 0;
 	size_t               buf_offset           = 0;
@@ -730,7 +750,8 @@ FATTR_WARN_UNUSED_RET void *basket_to_buf(const void *basket, size_t *size)
 	return buf;
 }
 
-FATTR_WARN_UNUSED_RET void *basket_from_buf(void *buf, size_t size)
+__attribute__((warn_unused_result))
+void *basket_from_buf(void *buf, size_t size)
 {
 	uint32_t             box_index;
 	uint32_t             buf_offset         = 0;
@@ -810,9 +831,9 @@ FATTR_WARN_UNUSED_RET void *basket_from_buf(void *buf, size_t size)
 
 		/* Create a new box */
 		if (A_OK != box_new_from_data_by_index(basket,
-											 box_dump_header_p->box_index,
-											 buf_char + buf_offset,
-											 box_dump_header_p->box_size)) {
+											   box_dump_header_p->box_index,
+											   buf_char + buf_offset,
+											   box_dump_header_p->box_size)) {
 			DE("Adding a buffer size (%u) to tail of box (%u) failed\n", box_dump_header_p->box_size, box_index);
 
 
@@ -848,7 +869,8 @@ FATTR_WARN_UNUSED_RET void *basket_from_buf(void *buf, size_t size)
 	return basket;
 }
 
-FATTR_WARN_UNUSED_RET int8_t box_compare_box(const void *box_left, const void *box_right)
+__attribute__((warn_unused_result))
+int8_t box_compare_box(const void *box_left, const void *box_right)
 {
 	const box_t *_box_left  = box_left;
 	const box_t *_box_right = box_right;
@@ -870,13 +892,13 @@ FATTR_WARN_UNUSED_RET int8_t box_compare_box(const void *box_left, const void *b
 	}
 
 	if (_box_right->used != _box_left->used) {
-		DDD("box_right->used (%ld) != box_left->used (%ld)\n", (uint64_t) _box_right->used, (uint64_t) _box_left->used);
+		DDD("box_right->used (%ld) != box_left->used (%ld)\n", (uint64_t)_box_right->used, (uint64_t)_box_left->used);
 		return 1;
 	}
 
 	memcmp_rc = memcmp(_box_right->data, _box_left->data, _box_right->used);
 	if (0 != memcmp_rc) {
-		DDD("box_right->data != box_left->data at %d : data size is %ld\n", memcmp_rc, (uint64_t) _box_right->used);
+		DDD("box_right->data != box_left->data at %d : data size is %ld\n", memcmp_rc, (uint64_t)_box_right->used);
 		return 1;
 	}
 
@@ -884,7 +906,8 @@ FATTR_WARN_UNUSED_RET int8_t box_compare_box(const void *box_left, const void *b
 }
 
 /* Compare two backets, return 0 if they are equal, 1 if not, < 0 on an error */
-FATTR_WARN_UNUSED_RET int8_t basket_compare_basket(const void *basket_right, const void *basket_left)
+__attribute__((warn_unused_result))
+int8_t basket_compare_basket(const void *basket_right, const void *basket_left)
 {
 	const basket_t *_basket_right = basket_right;
 	const basket_t *_basket_left  = basket_left;
@@ -912,7 +935,8 @@ FATTR_WARN_UNUSED_RET int8_t basket_compare_basket(const void *basket_right, con
 }
 
 /* Add a new box */
-FATTR_WARN_UNUSED_RET static ret_t box_add_new(void *basket)
+__attribute__((warn_unused_result))
+static ret_t box_add_new(void *basket)
 {
 	basket_t *_basket = basket;
 	TESTP_ABORT(_basket);
@@ -947,7 +971,8 @@ FATTR_WARN_UNUSED_RET static ret_t box_add_new(void *basket)
 
 /* Create a new box in the basket and add data */
 /* Testing function: basket_test.c::box_new_from_data_test() */
-FATTR_WARN_UNUSED_RET ssize_t box_new(void *basket, const void *buffer, const box_u32_t buffer_size)
+__attribute__((warn_unused_result))
+ssize_t box_new(void *basket, const void *buffer, const box_u32_t buffer_size)
 {
 	basket_t *_basket = basket;
 	box_t    *box;
@@ -1003,7 +1028,8 @@ FATTR_WARN_UNUSED_RET ssize_t box_new(void *basket, const void *buffer, const bo
 }
 
 /* Set a box in certain position; we need this function when restore basket from a flat buffer */
-FATTR_WARN_UNUSED_RET static ret_t box_new_from_data_by_index(void *basket, box_u32_t box_index, const void *buffer, const box_u32_t buffer_size)
+__attribute__((warn_unused_result))
+static ret_t box_new_from_data_by_index(void *basket, box_u32_t box_index, const void *buffer, const box_u32_t buffer_size)
 {
 	basket_t *_basket = basket;
 	box_t    *box;
@@ -1045,7 +1071,8 @@ FATTR_WARN_UNUSED_RET static ret_t box_new_from_data_by_index(void *basket, box_
 }
 
 /* Add data to a basket */
-FATTR_WARN_UNUSED_RET ret_t box_add(void *basket, const box_u32_t box_num, const void *buffer, const size_t buffer_size)
+__attribute__((warn_unused_result))
+ret_t box_add(void *basket, const box_u32_t box_num, const void *buffer, const size_t buffer_size)
 {
 	basket_t *_basket = basket;
 	box_t    *box;
@@ -1066,7 +1093,8 @@ FATTR_WARN_UNUSED_RET ret_t box_add(void *basket, const box_u32_t box_num, const
 	return bx_add(box, buffer, buffer_size);
 }
 
-FATTR_WARN_UNUSED_RET ret_t box_data_replace(void *basket, const box_u32_t box_num, const void *buffer, const size_t buffer_size)
+__attribute__((warn_unused_result))
+ret_t box_data_replace(void *basket, const box_u32_t box_num, const void *buffer, const size_t buffer_size)
 {
 	basket_t *_basket = basket;
 	box_t    *box;
@@ -1086,7 +1114,8 @@ FATTR_WARN_UNUSED_RET ret_t box_data_replace(void *basket, const box_u32_t box_n
 	return bx_replace_data(box, buffer, buffer_size);
 }
 
-FATTR_WARN_UNUSED_RET void *box_data_ptr(const void *basket, const box_u32_t box_num)
+__attribute__((warn_unused_result))
+void *box_data_ptr(const void *basket, const box_u32_t box_num)
 {
 	const basket_t *_basket = basket;
 	box_t          *box;
@@ -1109,9 +1138,10 @@ FATTR_WARN_UNUSED_RET void *box_data_ptr(const void *basket, const box_u32_t box
 	return bx_data_take(box);
 }
 
-FATTR_WARN_UNUSED_RET ssize_t box_data_copy(const void *basket, const box_u32_t box_num, void *dst_buf, size_t dst_buf_size)
+__attribute__((warn_unused_result))
+ssize_t box_data_copy(const void *basket, const box_u32_t box_num, void *dst_buf, size_t dst_buf_size)
 {
-	size_t to_copy;
+	size_t         to_copy;
 	const basket_t *_basket = basket;
 	box_t          *box;
 	TESTP_ABORT(_basket);
@@ -1135,12 +1165,13 @@ FATTR_WARN_UNUSED_RET ssize_t box_data_copy(const void *basket, const box_u32_t 
 		return 0;
 	}
 
-	to_copy = MIN(dst_buf_size, (size_t )box->used);
+	to_copy = MIN(dst_buf_size, (size_t)box->used);
 	memcpy(dst_buf, box->data, to_copy);
 	return to_copy;
 }
 
-FATTR_WARN_UNUSED_RET FATTR_CONST ssize_t box_data_size(const void *basket, const box_u32_t box_num)
+__attribute__((warn_unused_result))
+ssize_t box_data_size(const void *basket, const box_u32_t box_num)
 {
 	const basket_t *_basket = basket;
 	box_t          *box;
@@ -1161,7 +1192,8 @@ FATTR_WARN_UNUSED_RET FATTR_CONST ssize_t box_data_size(const void *basket, cons
 	return bx_used_take(box);
 }
 
-FATTR_WARN_UNUSED_RET ret_t box_data_free(void *basket, const box_u32_t box_num)
+__attribute__((warn_unused_result))
+ret_t box_data_free(void *basket, const box_u32_t box_num)
 {
 	const basket_t *_basket = basket;
 	box_t          *box;
@@ -1177,7 +1209,8 @@ FATTR_WARN_UNUSED_RET ret_t box_data_free(void *basket, const box_u32_t box_num)
 	return bx_clean_and_reset(box);
 }
 
-FATTR_WARN_UNUSED_RET FATTR_CONST void *box_steal_data(void *basket, const box_u32_t box_num)
+__attribute__((warn_unused_result, const))
+void *box_steal_data(void *basket, const box_u32_t box_num)
 {
 	const basket_t *_basket = basket;
 	TESTP_ABORT(_basket);
@@ -1198,25 +1231,29 @@ FATTR_WARN_UNUSED_RET FATTR_CONST void *box_steal_data(void *basket, const box_u
 }
 
 void basket_set_ticket(void *basket, uint64_t ticket)
-{	basket_t *_basket = basket;
+{
+	basket_t *_basket = basket;
 	TESTP_ABORT(_basket);
 	_basket->ticket = ticket;
 }
 
 uint64_t basket_get_ticket(void *basket)
-{	const basket_t *_basket = basket;
+{
+	const basket_t *_basket = basket;
 	TESTP_ABORT(_basket);
 	return _basket->ticket;
 }
 
 uint64_t basket_get_ticket_from_flat_buffer(void *flat_buffer)
-{	const basket_send_header_t *basket_send_header = (basket_send_header_t *) flat_buffer;
+{
+	const basket_send_header_t *basket_send_header = (basket_send_header_t *)flat_buffer;
 	TESTP_ABORT(basket_send_header);
 	return basket_send_header->ticket;
 }
 
 size_t basket_get_size_from_flat_buffer(void *flat_buffer)
-{	const basket_send_header_t *basket_send_header = (basket_send_header_t *) flat_buffer;
+{
+	const basket_send_header_t *basket_send_header = (basket_send_header_t *)flat_buffer;
 	TESTP_ABORT(basket_send_header);
 	return basket_send_header->total_len;
 }

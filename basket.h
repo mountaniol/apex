@@ -60,17 +60,17 @@ typedef struct {
 } basket_t;
 
 typedef struct __attribute__((packed)){
-	uint32_t watermark; /**< Watermark: filled with a predefined pattern WATERMARK_BOX */
-	uint32_t box_index; /**< The box index (place in Basket) in original Basket */
-	box_type_t box_size; /**< The size of the box, not include ::box_size and ::box_checksum fields */
+	watermark_t watermark; 	/**< Watermark: filled with a predefined pattern WATERMARK_BOX */
+	num_boxes_t box_index; 	/**< The box index (place in Basket) in original Basket */
+	box_type_t box_size; 	/**< The size of the box, not include ::box_size and ::box_checksum fields */
 }
 box_dump_t;
 
 typedef struct __attribute__((packed)){
 	watermark_t watermark; /**< Watermark: filled with a predefined pattern WATERMARK_BASKET */
-	uint32_t 	checksum; /**< The checksum of box buffer, means ::box_dump field; This field is optional, and ignored if == 0 */
+	checksum_t 	checksum; /**< The checksum of box buffer, means ::box_dump field; This field is optional, and ignored if == 0 */
 	ticket_t 	ticket; /**< The same as ticket in ::basket_t, for free use */
-	uint32_t 	total_len; /**< Total length of this buffer, including all fields */
+	box_type_t 	total_len; /**< Total length of this buffer, including all fields */
 	num_boxes_t boxes_used; /**< Number of Boxed used in original basket */
 	num_boxes_t boxes_dumped; /**< Number of Boxed dumped from the original basked */
 	uint32_t 	ztable_buf_size; /**< Size (in bytes) of ztable buffer. If '0' meant no ztable */
