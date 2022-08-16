@@ -110,7 +110,7 @@ ret_t basket_release(void *basket)
 /*** Getters / Setters */
 
 /* Internal function: get pointer of a box inside of the basket */
-__attribute__((hot))
+__attribute__((warn_unused_result,hot, pure))
 void *basket_get_box(const void *basket, const box_u32_t box_index)
 {
 	const basket_t *_basket = basket;
@@ -157,7 +157,7 @@ static box_s64_t basket_get_last_box_index(const void *basket)
 	return _basket->boxes_used - 1;
 }
 
-__attribute__((warn_unused_result))
+__attribute__((warn_unused_result, pure))
 size_t basket_memory_size(const void *basket)
 {
 	const basket_t *_basket  = basket;
@@ -190,7 +190,7 @@ size_t basket_memory_size(const void *basket)
 	return size;
 }
 
-__attribute__((warn_unused_result))
+__attribute__((warn_unused_result, pure))
 size_t basket_data_size(const void *basket)
 {
 	const basket_t *_basket  = basket;
@@ -906,7 +906,7 @@ int8_t box_compare_box(const void *box_left, const void *box_right)
 }
 
 /* Compare two backets, return 0 if they are equal, 1 if not, < 0 on an error */
-__attribute__((warn_unused_result))
+__attribute__((warn_unused_result, cold))
 int8_t basket_compare_basket(const void *basket_right, const void *basket_left)
 {
 	const basket_t *_basket_right = basket_right;
@@ -1114,7 +1114,7 @@ ret_t box_data_replace(void *basket, const box_u32_t box_num, const void *buffer
 	return bx_replace_data(box, buffer, buffer_size);
 }
 
-__attribute__((warn_unused_result))
+__attribute__((warn_unused_result, pure))
 void *box_data_ptr(const void *basket, const box_u32_t box_num)
 {
 	const basket_t *_basket = basket;
@@ -1170,7 +1170,7 @@ ssize_t box_data_copy(const void *basket, const box_u32_t box_num, void *dst_buf
 	return to_copy;
 }
 
-__attribute__((warn_unused_result))
+__attribute__((warn_unused_result, pure))
 ssize_t box_data_size(const void *basket, const box_u32_t box_num)
 {
 	const basket_t *_basket = basket;
@@ -1209,7 +1209,7 @@ ret_t box_data_free(void *basket, const box_u32_t box_num)
 	return bx_clean_and_reset(box);
 }
 
-__attribute__((warn_unused_result, const))
+__attribute__((warn_unused_result))
 void *box_steal_data(void *basket, const box_u32_t box_num)
 {
 	const basket_t *_basket = basket;
@@ -1237,6 +1237,7 @@ void basket_set_ticket(void *basket, uint64_t ticket)
 	_basket->ticket = ticket;
 }
 
+__attribute__((warn_unused_result, pure))
 uint64_t basket_get_ticket(void *basket)
 {
 	const basket_t *_basket = basket;
@@ -1244,6 +1245,7 @@ uint64_t basket_get_ticket(void *basket)
 	return _basket->ticket;
 }
 
+__attribute__((warn_unused_result, pure))
 uint64_t basket_get_ticket_from_flat_buffer(void *flat_buffer)
 {
 	const basket_send_header_t *basket_send_header = (basket_send_header_t *)flat_buffer;
@@ -1251,6 +1253,7 @@ uint64_t basket_get_ticket_from_flat_buffer(void *flat_buffer)
 	return basket_send_header->ticket;
 }
 
+__attribute__((warn_unused_result, pure))
 size_t basket_get_size_from_flat_buffer(void *flat_buffer)
 {
 	const basket_send_header_t *basket_send_header = (basket_send_header_t *)flat_buffer;
@@ -1258,6 +1261,7 @@ size_t basket_get_size_from_flat_buffer(void *flat_buffer)
 	return basket_send_header->total_len;
 }
 
+__attribute__((warn_unused_result, pure))
 int basket_validate_flat_buffer(void *flat_buffer)
 {
 	const basket_send_header_t *basket_send_header = (basket_send_header_t *)flat_buffer;
@@ -1279,6 +1283,7 @@ static void basket_validate_zhash(void *basket)
 	TESTP_ABORT(_basket->zhash);
 }
 
+__attribute__((warn_unused_result))
 ret_t basket_keyval_add_by_int64(void *basket, uint64_t key_int64, void *val, size_t val_size)
 {
 	TESTP(basket, -1);
@@ -1289,6 +1294,7 @@ ret_t basket_keyval_add_by_int64(void *basket, uint64_t key_int64, void *val, si
 	return zhash_insert_by_int(_basket->zhash, key_int64, val, val_size);
 }
 
+__attribute__((warn_unused_result))
 ret_t basket_keyval_add_by_str(void *basket, char *key_str, size_t key_str_len, void *val, size_t val_size)
 {
 	TESTP(basket, -1);
@@ -1299,12 +1305,14 @@ ret_t basket_keyval_add_by_str(void *basket, char *key_str, size_t key_str_len, 
 	return zhash_insert_by_str(_basket->zhash, key_str, key_str_len, val, val_size);
 }
 
+__attribute__((warn_unused_result, pure))
 uint64_t basket_keyval_str_to_int64(char *key_str, size_t key_str_len)
 {
 	TESTP(key_str, 0);
 	return zhash_key_int64_from_key_str(key_str, key_str_len);
 }
 
+__attribute__((warn_unused_result, pure))
 void *basket_keyval_find_by_int64(void *basket, uint64_t key_int64, ssize_t *val_size)
 {
 	TESTP(basket, NULL);
@@ -1319,6 +1327,7 @@ void *basket_keyval_find_by_int64(void *basket, uint64_t key_int64, ssize_t *val
 	return zhash_find_by_int(_basket->zhash, key_int64, val_size);
 }
 
+__attribute__((warn_unused_result, pure))
 void *basket_keyval_find_by_str(void *basket, char *key_str, size_t key_str_len, ssize_t *val_size)
 {
 	TESTP(basket, NULL);
@@ -1334,6 +1343,7 @@ void *basket_keyval_find_by_str(void *basket, char *key_str, size_t key_str_len,
 	return zhash_find_by_str(_basket->zhash, key_str, key_str_len, val_size);
 }
 
+__attribute__((warn_unused_result))
 void *basket_keyval_extract_by_in64(void *basket, uint64_t key_int64, ssize_t *size)
 {
 	TESTP(basket, NULL);
@@ -1348,6 +1358,7 @@ void *basket_keyval_extract_by_in64(void *basket, uint64_t key_int64, ssize_t *s
 	return zhash_extract_by_int(_basket->zhash, key_int64, size);
 }
 
+__attribute__((warn_unused_result))
 void *basket_keyval_extract_by_str(void *basket, char *key_str, size_t key_str_len, ssize_t *size)
 {
 	TESTP(basket, NULL);

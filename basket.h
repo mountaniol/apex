@@ -88,6 +88,7 @@ basket_send_header_t;
  * @return box_t* Pointer to a box, NULL on an error or if the box is not allocated yet
  * @details If NULL returned it is not an error. On a critical error this function will call abort().
  */
+__attribute__((warn_unused_result,hot, pure))
 extern void *basket_get_box(const void *basket, const box_u32_t box_index);
 
 /*** Basket create / release ***/
@@ -98,6 +99,7 @@ extern void *basket_get_box(const void *basket, const box_u32_t box_index);
  * @return ret_t Pointer to a new Basket object on success, NULL on error
  * @details 
  */
+__attribute__((warn_unused_result))
 extern void *basket_new(void);
 
 /**
@@ -110,6 +112,7 @@ extern void *basket_new(void);
  *  		memory. If you want to know what size of flat memory
  *  		buffer will be, use ::basket_flat_buf_size()
  */
+__attribute__((warn_unused_result, pure))
 extern size_t basket_memory_size(const void *basket);
 
 /**
@@ -119,6 +122,7 @@ extern size_t basket_memory_size(const void *basket);
  * @return size_t Size of the all buffers in all boxes
  * @details
  */
+__attribute__((warn_unused_result, pure))
 extern size_t basket_data_size(const void *basket);
 
 /**
@@ -133,6 +137,7 @@ extern size_t basket_data_size(const void *basket);
  *  		basket. Uf you want to know the size of the basket
  *  		in memory, use ::basket_memory_size() function
  */
+__attribute__((warn_unused_result))
 extern size_t basket_flat_buf_size(const basket_t *basket);
 
 /**
@@ -145,6 +150,7 @@ extern size_t basket_flat_buf_size(const basket_t *basket);
  *  		boxes in the basket, and all buffers in  the boxes.
  *  		The whole basket object released completely.
  */
+__attribute__((warn_unused_result))
 extern ret_t basket_release(void *basket);
 
 /**
@@ -158,6 +164,7 @@ extern ret_t basket_release(void *basket);
  *  		contain 0 boxes. All memory of the boxes will be
  *  		released.
  */
+__attribute__((warn_unused_result))
 extern ret_t basket_clean(void *basket);
 
 /*** Box(es) manipulations ***/
@@ -183,6 +190,7 @@ extern ret_t basket_clean(void *basket);
  *  		means, this operation shifts all boxes after the box
  *  		'after'.
  */
+__attribute__((warn_unused_result))
 extern ret_t box_insert_after(void *basket, const uint32_t after_index, const void *buffer, const box_u32_t buffer_size);
 
 /**
@@ -200,6 +208,7 @@ extern ret_t box_insert_after(void *basket, const uint32_t after_index, const vo
  *  		to place of box 2, and the previous box 2 will
  *  		become box 4. All other boxes stay untouched.
  */
+__attribute__((warn_unused_result))
 extern ret_t box_swap(void *basket, const box_u32_t first_index, const box_u32_t second_index);
 
 /**
@@ -213,6 +222,7 @@ extern ret_t box_swap(void *basket, const box_u32_t first_index, const box_u32_t
  *  		buffer removed, and its size will be 0 after this
  *  		operation. You may reuse this box if you wish.
  */
+__attribute__((warn_unused_result))
 extern ret_t box_clean(void *basket, const box_u32_t box_index);
 
 /**
@@ -230,6 +240,7 @@ extern ret_t box_clean(void *basket, const box_u32_t box_index);
  *  		memory of (2 + 3), the box 3 will be an empty box,
  *  		box 4 and 5 will stay boxes 4 and 5
  */
+__attribute__((warn_unused_result))
 extern ret_t box_merge_box(void *basket, const box_u32_t src, const box_u32_t dst);
 
 /**
@@ -255,6 +266,7 @@ extern ret_t box_merge_box(void *basket, const box_u32_t src, const box_u32_t ds
  *  		previous box 5 becomes box 6. TODO: An diagramm
  *  		should be added to explain it visually.
  */
+__attribute__((warn_unused_result))
 extern ret_t box_bisect(void *basket, const box_u32_t box_num, const size_t from_offset);
 
 /**
@@ -274,6 +286,7 @@ extern ret_t box_bisect(void *basket, const box_u32_t box_num, const size_t from
  *  		in tail of the box 0, then added memory of the box
  *  		3 and so on.
  */
+__attribute__((warn_unused_result))
 extern ret_t basket_collapse(void *basket);
 
 /**
@@ -291,6 +304,7 @@ extern ret_t basket_collapse(void *basket);
  *  		::basket_from_buf() function. The 'Basket' passed to
  *  		this function not changed and not released.
  */
+__attribute__((warn_unused_result))
 extern void *basket_to_buf(const void *basket, size_t *size);
 
 /**
@@ -309,6 +323,7 @@ extern void *basket_to_buf(const void *basket, size_t *size);
  *  		operation. The caller owns the memory and the caller
  *  		responsible to release it.
  */
+__attribute__((warn_unused_result))
 extern void *basket_from_buf(void *buf, size_t size);
 
 /**
@@ -322,6 +337,7 @@ extern void *basket_from_buf(void *buf, size_t size);
  *  		objects, and not result of ::basket_to_buf()
  *  		function.
  */
+__attribute__((warn_unused_result, cold))
 extern int8_t basket_compare_basket(const void *basket_right, const void *basket_left);
 
 /*** A single sector operation - add, remove, modifu sector's memory ***/
@@ -337,6 +353,7 @@ extern int8_t basket_compare_basket(const void *basket_right, const void *basket
  * @details The new box will have sequentional number. If you already have 5 boxes,
  * the newely created box will have index "5," means it will be the sixts box. The boxes index starts from 0.
  */
+__attribute__((warn_unused_result))
 extern ssize_t box_new(void *basket, const void *buffer, const box_u32_t buffer_size);
 
 /**
@@ -354,6 +371,7 @@ extern ssize_t box_new(void *basket, const void *buffer, const box_u32_t buffer_
  *  		after this operation the box 1 will contain "Blue
  *  		car and yellow bike"
  */
+__attribute__((warn_unused_result))
 extern ret_t box_add(void *basket, const box_u32_t box_num, const void *buffer, const size_t buffer_size);
 
 /**
@@ -372,6 +390,7 @@ extern ret_t box_add(void *basket, const box_u32_t box_num, const void *buffer, 
  *  		data. THe original 'buffer' is unouched and it is up
  *  		to caller to release it.
  */
+__attribute__((warn_unused_result))
 extern ret_t box_data_replace(void *basket, const box_u32_t box_num, const void *buffer, const size_t buffer_size);
 
 /**
@@ -387,6 +406,7 @@ extern ret_t box_data_replace(void *basket, const box_u32_t box_num, const void 
  *  		WARNING: Do not release this memory! You do not own
  *  		it! If you do, the basket_release will fail.
  */
+__attribute__((warn_unused_result, pure))
 extern void *box_data_ptr(const void *basket, const box_u32_t box_num);
 
 /**
@@ -399,6 +419,7 @@ extern void *box_data_ptr(const void *basket, const box_u32_t box_num);
  * @return ssize_t Number of copied bytes
  * @details 
  */
+__attribute__((warn_unused_result))
 extern ssize_t box_data_copy(const void *basket, const box_u32_t box_num, void *dst_buf, size_t dst_buf_size);
 /**
  * @author Sebastian Mountaniol (7/12/22)
@@ -412,6 +433,7 @@ extern ssize_t box_data_copy(const void *basket, const box_u32_t box_num, void *
  * @details You probably need this function when use
  *  		::box_data_ptr() function
  */
+__attribute__((warn_unused_result, pure))
 extern ssize_t box_data_size(const void *basket, const box_u32_t box_num);
 
 /**
@@ -423,6 +445,7 @@ extern ssize_t box_data_size(const void *basket, const box_u32_t box_num);
  * @return ret_t OK on success, a negative error on failure
  * @details 
  */
+__attribute__((warn_unused_result))
 extern ret_t box_data_free(void *basket, const box_u32_t box_num);
 
 /**
@@ -435,6 +458,7 @@ extern ret_t box_data_free(void *basket, const box_u32_t box_num);
  *  	   or on an error
  * @details 
  */
+__attribute__((warn_unused_result))
 extern void *box_steal_data(void *_basket, const box_u32_t box_num);
 
 /**
@@ -456,6 +480,7 @@ extern void basket_set_ticket(void *basket, uint64_t ticket);
  * @return uint64_t The ticket
  * @details See details of ::basket_set_ticket()
  */
+__attribute__((warn_unused_result, pure))
 extern uint64_t basket_get_ticket(void *basket);
 
 /**
@@ -468,6 +493,7 @@ extern uint64_t basket_get_ticket(void *basket);
  * @return uint64_t Ticket
  * @details 
  */
+__attribute__((warn_unused_result, pure))
 extern uint64_t basket_get_ticket_from_flat_buffer(void *flat_buffer);
 
 /**
@@ -479,6 +505,7 @@ extern uint64_t basket_get_ticket_from_flat_buffer(void *flat_buffer);
  * @details The flat memory basket buffer contains its size. It
  *  		set when the buffer created.
  */
+__attribute__((warn_unused_result, pure))
 extern size_t basket_get_size_from_flat_buffer(void *flat_buffer);
 
 /**
@@ -490,6 +517,7 @@ extern size_t basket_get_size_from_flat_buffer(void *flat_buffer);
  *  	   -1 on an error
  * @details 
  */
+__attribute__((warn_unused_result, pure))
 extern int basket_validate_flat_buffer(void *flat_buffer);
 
 /*** KEY/VALUE API ***/
@@ -534,6 +562,7 @@ extern int basket_validate_flat_buffer(void *flat_buffer);
  *  		references, you will get a broken pointer on another
  *  		machine / in another process space / after restoring it.
  */
+__attribute__((warn_unused_result))
 extern ret_t basket_keyval_add_by_int64(void *basket, uint64_t key_int64, void *val, size_t val_size);
 
 /**
@@ -567,6 +596,7 @@ extern ret_t basket_keyval_add_by_int64(void *basket, uint64_t key_int64, void *
  *  		another process space / after restoring it from flat
  *  		buffer.
  */
+__attribute__((warn_unused_result))
 extern ret_t basket_keyval_add_by_str(void *basket, char *key_str, size_t key_str_len, void *val, size_t val_size);
 
 /**
@@ -582,6 +612,7 @@ extern ret_t basket_keyval_add_by_str(void *basket, char *key_str, size_t key_st
  *  		ZHASH_STRING_KEY_MAX_LEN, which is 64 (bytes) today,
  *  		when I am writing this description
  */
+__attribute__((warn_unused_result, pure))
 extern uint64_t basket_keyval_str_to_int64(char *key_str, size_t key_str_len);
 
 /**
@@ -603,6 +634,7 @@ extern uint64_t basket_keyval_str_to_int64(char *key_str, size_t key_str_len);
  *  		buffer from this basket, avoid operations changing
  *  		the value buffer size.
  */
+__attribute__((warn_unused_result, pure))
 extern void *basket_keyval_find_by_int64(void *_basket, uint64_t key_int64, ssize_t *val_size);
 
 /**
@@ -626,6 +658,7 @@ extern void *basket_keyval_find_by_int64(void *_basket, uint64_t key_int64, ssiz
  *  		if you want to create a flat buffer from this
  *  		basket.
  */
+__attribute__((warn_unused_result, pure))
 extern void *basket_keyval_find_by_str(void *_basket, char *key_str, size_t key_str_len, ssize_t *val_size);
 
 /**
@@ -644,6 +677,7 @@ extern void *basket_keyval_find_by_str(void *_basket, char *key_str, size_t key_
  *  	   NULL returned, see above.
  * @details The value will be removed from key/value hash. 
  */
+__attribute__((warn_unused_result))
 extern void *basket_keyval_extract_by_in64(void *_basket, uint64_t key_int64, ssize_t *size);
 
 /**
@@ -664,6 +698,7 @@ extern void *basket_keyval_extract_by_in64(void *_basket, uint64_t key_int64, ss
  *  	   NULL returned, see above.
  * @details The value will be removed from key/value hash. 
  */
+__attribute__((warn_unused_result))
 extern void *basket_keyval_extract_by_str(void *_basket, char *key_str, size_t key_str_len, ssize_t *size);
 
 #endif /* BASKET_H_ */

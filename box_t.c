@@ -179,8 +179,7 @@ void bx_members_inc(box_t *box, const box_s64_t inc)
 
 	/* Test that the new value fits the current data type */
 	if (bx_if_size_fits_box_type(box->members + inc)) {
-		DE("The number of members is too large for the box\n");
-		abort();
+		MES_ABORT("The number of members is too large for the box\n");
 	}
 	box->members += inc;
 }
@@ -190,8 +189,7 @@ void bx_members_dec(box_t *box, const box_s64_t dec)
 	TESTP_ABORT(box);
 
 	if (bx_if_size_fits_box_type(dec)) {
-		DE("The asked size is too large for the box\n");
-		abort();
+		MES_ABORT("The asked size is too large for the box\n");
 	}
 	if (dec > bx_members_take(box)) {
 		DE("Tried to decrement 'box->members' such that it will be < 0: current %ld, asked decrement %ld\n",
@@ -209,6 +207,7 @@ void bx_members_dec(box_t *box, const box_s64_t dec)
 	}
 }
 
+__attribute__((warn_unused_result, pure))
 size_t bx_member_size(box_t *box)
 {
 	TESTP_ABORT(box);
@@ -219,6 +218,7 @@ size_t bx_member_size(box_t *box)
 	return (size_t)bx_used_take(box) / (size_t)bx_members_take(box);
 }
 
+__attribute__((warn_unused_result))
 void *bx_member_ptr(box_t *box, size_t member)
 {
 	TESTP_ABORT(box);
@@ -241,6 +241,7 @@ void *bx_member_ptr(box_t *box, size_t member)
 	return (data + member);
 }
 
+__attribute__((warn_unused_result))
 ret_t bx_member_copy(box_t *box, size_t member, void *buf, size_t buf_size)
 {
 	TESTP_ABORT(box);

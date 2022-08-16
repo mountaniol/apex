@@ -101,6 +101,7 @@ extern void bx_dump(const box_t *buf, const char *mes);
  *  Return -EACCESS if the buffer is read-only
  *  Return -EINVAL if buffer or data is NULL
  */
+__attribute__((warn_unused_result))
 extern ret_t bx_data_set(box_t *buf, char *data, const box_s64_t size, const box_s64_t len);
 
 /**
@@ -115,6 +116,7 @@ extern ret_t bx_data_set(box_t *buf, char *data, const box_s64_t size, const box
  *  		"data" buffer still belongs to the "buf_t"; the
  *  		caller just gets pointer of this buffer.
  */
+__attribute__((warn_unused_result, pure))
 extern void *bx_data_take(const box_t *buf);
 
 /**
@@ -128,6 +130,7 @@ extern void *bx_data_take(const box_t *buf);
  *  	   -EINVAL if the buffer is NULL pointer
  * @details 
  */
+__attribute__((warn_unused_result, pure))
 extern ret_t bx_is_data_null(const box_t *buf);
 
 /**
@@ -139,6 +142,7 @@ extern ret_t bx_is_data_null(const box_t *buf);
  * 	Returns EINVAL if the 'buf' == NULL.
  * 	Returns EBAD if this buffer is invalid.
  */
+__attribute__((warn_unused_result, pure))
 extern ret_t bx_is_valid(const box_t *buf, const char *who, const int line);
 
 /**
@@ -149,6 +153,7 @@ extern ret_t bx_is_valid(const box_t *buf, const char *who, const int line);
  * @param size_t size Data buffer size, may be 0
  * @return buf_t* New buf_t structure.
  */
+__attribute__((warn_unused_result))
 extern box_t *bx_new(const box_s64_t size);
 
 /**
@@ -160,6 +165,7 @@ extern box_t *bx_new(const box_s64_t size);
  * @return void* Data buffer pointer on success, NULL on error. Warning: if the but_t did not have a
  * 	buffer (i.e. buf->data was NULL) the NULL will be returned.
  */
+__attribute__((warn_unused_result))
 extern void *bx_data_steal(box_t *buf);
 
 #if 0 /* SEB */
@@ -185,6 +191,7 @@ extern void *bx_data_steal_and_release(box_t *buf);
  * @details If the buffer is invalid (see buf_is_valid()),
  * @details the opreration won't be interrupted and buffer will be cleaned.
  */
+__attribute__((warn_unused_result))
 extern ret_t bx_clean_and_reset(box_t *buf);
 
 /**
@@ -203,6 +210,7 @@ extern ret_t bx_clean_and_reset(box_t *buf);
  *  case the buffer kept untouched. -ENOKEY if the buffer marked
  *  as CAANRY but CANARY work can't be added.
  */
+__attribute__((warn_unused_result))
 extern ret_t bx_room_add_memory(box_t *buf, const box_s64_t size);
 
 /**
@@ -217,6 +225,7 @@ extern ret_t bx_room_add_memory(box_t *buf, const box_s64_t size);
  *  		is used. This function returns the "room" remains:
  *  		"room - used"
  */
+__attribute__((warn_unused_result, pure))
 extern box_s64_t bx_room_avaialable_take(const box_t *buf);
 
 /**
@@ -232,6 +241,7 @@ extern box_s64_t bx_room_avaialable_take(const box_t *buf);
  * 	EINVAL if buf is NULL or 'expected' == 0
  * 	Also can return all error statuses of buf_add_room()
  */
+__attribute__((warn_unused_result))
 extern ret_t bx_room_assure(box_t *buf, const box_s64_t expect);
 
 /**
@@ -244,6 +254,7 @@ extern ret_t bx_room_assure(box_t *buf, const box_s64_t expect);
  * 	EACCESS if the buf is read-only
  * 	ECANCELED if the buffer is invalid
  */
+__attribute__((warn_unused_result))
 extern ret_t bx_free(box_t *buf);
 
 /**
@@ -259,6 +270,7 @@ extern ret_t bx_free(box_t *buf);
  * 	EACCESS if the 'buf' is read-only
  * 	ENOMEM if new memory can't be allocated
  */
+__attribute__((warn_unused_result))
 extern ret_t bx_add(box_t *buf, const char *new_data, const box_s64_t size);
 
 /**
@@ -276,6 +288,7 @@ extern ret_t bx_add(box_t *buf, const char *new_data, const box_s64_t size);
  *  		In case the operation failed, the status of both
  *  		'src' and 'dst' is undefined.
  */
+__attribute__((warn_unused_result))
 extern ret_t bx_merge(box_t *dst, box_t *src);
 /**
  * @author Sebastian Mountaniol (7/17/22)
@@ -292,6 +305,7 @@ extern ret_t bx_merge(box_t *dst, box_t *src);
  *  		must be not NULL, and its size must be > 0,
  *  		otherwise this function fails or returns an error.
  */
+__attribute__((warn_unused_result))
 ret_t bx_replace_data(box_t *buf, const char *new_data, const box_s64_t size);
 
 /**
@@ -302,6 +316,7 @@ ret_t bx_replace_data(box_t *buf, const char *new_data, const box_s64_t size);
  * @return ssize_t Number of bytes used on success
  * 	EINVAL if the 'buf' == NULL
  */
+__attribute__((warn_unused_result, pure))
 extern box_s64_t bx_used_take(const box_t *buf);
 
 /**
@@ -349,8 +364,12 @@ extern void bx_used_dec(box_t *buf, const box_s64_t dec);
 extern void bx_members_set(box_t *box, const box_s64_t members);
 void bx_members_inc(box_t *box, const box_s64_t inc);
 void bx_members_dec(box_t *box, const box_s64_t dec);
+
+__attribute__((warn_unused_result, pure))
 size_t bx_member_size(box_t *box);
+__attribute__((warn_unused_result))
 void *bx_member_ptr(box_t *box, size_t member);
+__attribute__((warn_unused_result))
 ret_t bx_member_copy(box_t *box, size_t member, void *buf, size_t buf_size);
 
 /**

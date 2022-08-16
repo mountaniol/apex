@@ -334,11 +334,11 @@ static basket_t *basket_new_test(void)
 
 static int box_new_from_data_test(void)
 {
-	#ifndef NUM_BOXES_8_BITS
+#ifndef NUM_BOXES_8_BITS
 	uint32_t  boxes_in_test[]   = {0, 1, 10, 100, 1024};
-	#else
+#else
 	uint32_t  boxes_in_test[]   = {0, 1, 10, 100, 254};
-	#endif
+#endif
 	uint32_t  number_of_tests   = sizeof(boxes_in_test) / sizeof(uint32_t);
 	uint32_t  i;
 
@@ -409,8 +409,10 @@ static int box_new_from_data_test(void)
 		basket_sz = basket_memory_size(basket);
 #endif /* DEBUG3 */
 
-		basket_release(basket);
-
+		if (basket_release(basket)) {
+			DE("[TEST] Could not release a basket\n");
+			abort();
+		}
 
 #ifdef DEBUG3
 		DDD("[TEST] Success: Created, filled, tested and destroyed basket with %u boxes, size was: %d\n",
@@ -487,8 +489,11 @@ static int box_new_from_data_simple_test(void)
 	}
 
 	basket_sz = basket_memory_size(basket);
-	basket_data_sz = basket_data_size (basket);
-	basket_release(basket);
+	basket_data_sz = basket_data_size(basket);
+	if (basket_release(basket)) {
+		DE("[TEST] Could not release a basket\n");
+		abort();
+	}
 
 	PR("[TEST] Success: Created, filled, tested and destroyed basket with %d boxes, basket size was: %d, data size: %d\n",
 	   2, basket_sz, basket_data_sz);
@@ -512,7 +517,7 @@ static int box_data_insert_and_validate(basket_t *basket, const box_u32_t box_nu
 	char   *data_ptr     = NULL;
 	size_t data_ptr_size;
 	TESTP(basket, -1);
-	
+
 	rc = box_new(basket, data, data_len);
 	if (rc < 0) {
 		DE("[TEST] Failed adding a string to a box\n");
@@ -1004,7 +1009,7 @@ int main(void)
 	zhash_to_buf_and_back();
 	add_many_items_test(1000);
 	add_many_items_test(1024 * 1024 * 10);
-	
+
 	/* Basket and Box tests */
 	PR("\nSECTION 2: BOX\n");
 	box_new_from_data_simple_test();
